@@ -46,7 +46,7 @@ fn register_start(message: Json<Message>) -> JsonValue {
 
     let response_bytes = server_registration_start.message.serialize();
     let response = base64::encode(response_bytes);
-    json!({ "id": &nonce, "response": &response })
+    json!({ "id": &nonce, "data": &response })
 }
 
 /// curl -X POST -H "Content-Type: application/json" -d '{ "id": 1234, "data": "bar" }' http://localhost:8000/register/file
@@ -60,7 +60,7 @@ fn register_finish(message: Json<Message>) -> JsonValue {
     let password_file =
         opaque.server_side_registration_finish(&message.data, &server_registration_bytes);
     let response = base64::encode(password_file);
-    json!({ "id": &message.id, "response": &response })
+    json!({ "id": &message.id, "data": &response })
 }
 
 /// https://github.com/SergioBenitez/Rocket/tree/v0.4.10/examples
