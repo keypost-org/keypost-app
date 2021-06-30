@@ -11,17 +11,8 @@ use rocket_contrib::json;
 use rocket_contrib::json::{Json, JsonValue};
 use rocket_contrib::serve::StaticFiles;
 
-use std::collections::HashMap;
-use std::sync::Mutex;
-
+mod cache;
 mod crypto;
-
-lazy_static! {
-    static ref CACHE: Mutex<HashMap<u32, Vec<u8>>> = {
-        let map = HashMap::new();
-        Mutex::new(map)
-    };
-}
 
 /// https://github.com/SergioBenitez/Rocket/blob/08e5b6dd0dd9d723ca2bd4488ff4a9ef0af8b91b/examples/json/src/main.rs#L22
 #[derive(Debug, Deserialize, Serialize)]
@@ -49,7 +40,8 @@ fn register_start(message: Json<Message>) -> JsonValue {
 
     let nonce = rand::random::<u32>();
     let server_registration_bytes = server_registration_start.state.serialize();
-    let mut cache = CACHE.lock().unwrap();
+    //let mut cache = CACHE.lock().unwrap();
+    let cache = cache::Store::new();
     cache.insert(nonce, server_registration_bytes);
 
     let response_bytes = server_registration_start.message.serialize();
@@ -61,11 +53,12 @@ fn register_start(message: Json<Message>) -> JsonValue {
 #[post("/register/finish", format = "json", data = "<message>")]
 fn register_finish(message: Json<Message>) -> JsonValue {
     println!("{:?}", &message);
-    let cache = CACHE.lock().unwrap();
+    // let cache = CACHE.lock().unwrap();
+    let cache = cache::Store::new();
     let server_registration_bytes = cache.get(&message.id).unwrap();
     let opaque = crypto::Opaque::new();
     let password_file =
-        opaque.server_side_registration_finish(&message.data, server_registration_bytes);
+        opaque.server_side_registration_finish(&message.data, &server_registration_bytes);
     let response = base64::encode(password_file);
     json!({ "id": &message.id, "response": &response })
 }
