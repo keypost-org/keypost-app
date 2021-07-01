@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
 use std::process::exit;
+use std::sync::Mutex;
 
 use curve25519_dalek::ristretto::RistrettoPoint;
 use opaque_ke::keypair::KeyPair;
@@ -9,12 +10,20 @@ use opaque_ke::ClientRegistrationStartResult;
 use opaque_ke::{
     ciphersuite::CipherSuite, rand::rngs::OsRng, ClientRegistration,
     ClientRegistrationFinishParameters, RegistrationRequest, RegistrationResponse,
-    RegistrationUpload, ServerRegistration, ServerRegistrationStartResult,
+    RegistrationUpload, ServerLoginStartResult, ServerRegistration, ServerRegistrationStartResult,
 };
 use opaque_ke::{
     ClientLogin, ClientLoginFinishParameters, ClientLoginStartParameters, CredentialFinalization,
     CredentialRequest, CredentialResponse, ServerLogin, ServerLoginStartParameters,
 };
+
+lazy_static! {
+    static ref KEY_PAIR: Mutex<KeyPair<RistrettoPoint>> = {
+        let mut server_rng = OsRng;
+        let key_pair = Default::generate_random_keypair(&mut server_rng);
+        Mutex::new(key_pair)
+    };
+}
 
 // The ciphersuite trait allows to specify the underlying primitives
 // that will be used in the OPAQUE protocol
@@ -27,15 +36,11 @@ impl CipherSuite for Default {
     type SlowHash = opaque_ke::slow_hash::NoOpHash;
 }
 
-pub struct Opaque {
-    key_pair: KeyPair<RistrettoPoint>,
-}
+pub struct Opaque {}
 
 impl Opaque {
     pub fn new() -> Opaque {
-        let mut server_rng = OsRng;
-        let kp = Default::generate_random_keypair(&mut server_rng);
-        Opaque { key_pair: kp }
+        Opaque {}
     }
 
     pub fn server_side_registration_start(
@@ -44,7 +49,8 @@ impl Opaque {
     ) -> ServerRegistrationStartResult<Default> {
         let registration_request_bytes =
             base64::decode(registration_request_base64).expect("Could not perform base64 decode");
-        let server_public_key = self.key_pair.public();
+        let key_pair = KEY_PAIR.lock().unwrap();
+        let server_public_key = key_pair.public();
         let mut server_rng = OsRng;
         ServerRegistration::<Default>::start(
             &mut server_rng,
