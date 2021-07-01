@@ -16,6 +16,7 @@ pub struct Store {
 
 impl Store {
     pub fn new() -> Store {
+        //FIXME rename this method (acts more like a handle) and remove _cache impl.
         let _cache = HashMap::<u32, Vec<u8>>::new();
         Store { _cache: None }
     }
