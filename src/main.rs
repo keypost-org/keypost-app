@@ -16,7 +16,12 @@ mod crypto;
 
 /// https://github.com/SergioBenitez/Rocket/blob/08e5b6dd0dd9d723ca2bd4488ff4a9ef0af8b91b/examples/json/src/main.rs#L22
 #[derive(Debug, Deserialize, Serialize)]
-struct Message {
+struct RegisterStart {
+    data: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct RegisterFinish {
     id: u32,
     data: String,
 }
@@ -31,16 +36,15 @@ fn logout() -> String {
     "Goodbye!".to_string()
 }
 
-/// curl -X POST -H "Content-Type: application/json" -d '{ "id": 0, "data": "bar" }' http://localhost:8000/register/start
-#[post("/register/start", format = "json", data = "<message>")]
-fn register_start(message: Json<Message>) -> JsonValue {
-    println!("{:?}", &message);
+/// curl -X POST -H "Content-Type: application/json" -d '{ "data": "bar" }' http://localhost:8000/register/start
+#[post("/register/start", format = "json", data = "<payload>")]
+fn register_start(payload: Json<RegisterStart>) -> JsonValue {
+    println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
-    let server_registration_start = opaque.server_side_registration_start(&message.data);
+    let server_registration_start = opaque.server_side_registration_start(&payload.data);
 
     let nonce = rand::random::<u32>();
     let server_registration_bytes = server_registration_start.state.serialize();
-    //let mut cache = CACHE.lock().unwrap();
     let cache = cache::Store::new();
     cache.insert(nonce, server_registration_bytes);
 
@@ -50,17 +54,16 @@ fn register_start(message: Json<Message>) -> JsonValue {
 }
 
 /// curl -X POST -H "Content-Type: application/json" -d '{ "id": 1234, "data": "bar" }' http://localhost:8000/register/file
-#[post("/register/finish", format = "json", data = "<message>")]
-fn register_finish(message: Json<Message>) -> JsonValue {
-    println!("{:?}", &message);
-    // let cache = CACHE.lock().unwrap();
+#[post("/register/finish", format = "json", data = "<payload>")]
+fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
+    println!("{:?}", &payload);
     let cache = cache::Store::new();
-    let server_registration_bytes = cache.get(&message.id).unwrap();
+    let server_registration_bytes = cache.get(&payload.id).unwrap();
     let opaque = crypto::Opaque::new();
     let password_file =
-        opaque.server_side_registration_finish(&message.data, &server_registration_bytes);
+        opaque.server_side_registration_finish(&payload.data, &server_registration_bytes);
     let response = base64::encode(password_file);
-    json!({ "id": &message.id, "data": &response })
+    json!({ "id": &payload.id, "data": &response })
 }
 
 /// https://github.com/SergioBenitez/Rocket/tree/v0.4.10/examples
