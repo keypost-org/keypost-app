@@ -56,8 +56,7 @@ fn register_start(payload: Json<RegisterStart>) -> JsonValue {
     let server_registration_start = opaque.server_side_registration_start(&payload.data);
     let nonce = rand::random::<u32>();
     let server_registration_bytes = server_registration_start.state.serialize();
-    let cache = cache::Store::new();
-    cache.insert(nonce, server_registration_bytes);
+    cache::insert(nonce, server_registration_bytes);
     let response_bytes = server_registration_start.message.serialize();
     let response = base64::encode(response_bytes);
     json!({ "id": &nonce, "data": &response })
@@ -67,8 +66,7 @@ fn register_start(payload: Json<RegisterStart>) -> JsonValue {
 #[post("/register/finish", format = "json", data = "<payload>")]
 fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
     println!("{:?}", &payload);
-    let cache = cache::Store::new();
-    let server_registration_bytes = cache.get(&payload.id).unwrap();
+    let server_registration_bytes = cache::get(&payload.id).unwrap();
     let opaque = crypto::Opaque::new();
     let password_file =
         opaque.server_side_registration_finish(&payload.data, &server_registration_bytes);
@@ -83,8 +81,7 @@ fn login_start(payload: Json<LoginStart>) -> JsonValue {
     let server_login_start_result = opaque.login_start(&payload.data, &payload.file);
     let nonce = rand::random::<u32>();
     let server_login_bytes = server_login_start_result.state.serialize();
-    let cache = cache::Store::new();
-    cache.insert(nonce, server_login_bytes);
+    cache::insert(nonce, server_login_bytes);
     let response_bytes = server_login_start_result.message.serialize();
     let response = base64::encode(response_bytes);
     json!({ "id": &nonce, "data": &response })
@@ -93,8 +90,7 @@ fn login_start(payload: Json<LoginStart>) -> JsonValue {
 #[post("/login/finish", format = "json", data = "<payload>")]
 fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
     println!("{:?}", &payload);
-    let cache = cache::Store::new();
-    let server_login_bytes = cache.get(&payload.id).unwrap();
+    let server_login_bytes = cache::get(&payload.id).unwrap();
     let opaque = crypto::Opaque::new();
     let response_bytes = opaque.login_finish(&server_login_bytes, &payload.data);
     let response = base64::encode(response_bytes);
