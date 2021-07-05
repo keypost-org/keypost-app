@@ -79,13 +79,11 @@ impl Opaque {
 
     pub fn login_start(
         &self,
-        password_file_base64: &str,
+        password_file_bytes: &[u8],
         credential_request_base64: &str,
     ) -> ServerLoginStartResult<Default> {
         let credential_request_bytes =
             base64::decode(credential_request_base64).expect("Could not perform base64 decode");
-        let password_file_bytes =
-            base64::decode(password_file_base64).expect("Could not perform base64 decode");
         let password_file =
             ServerRegistration::<Default>::deserialize(&password_file_bytes).unwrap();
         let mut server_rng = OsRng;
