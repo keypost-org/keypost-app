@@ -76,6 +76,46 @@ impl Opaque {
             .unwrap();
         password_file.serialize()
     }
+
+    pub fn login_start(
+        &self,
+        password_file_base64: &str,
+        credential_request_base64: &str,
+    ) -> ServerLoginStartResult<Default> {
+        let credential_request_bytes =
+            base64::decode(credential_request_base64).expect("Could not perform base64 decode");
+        let password_file_bytes =
+            base64::decode(password_file_base64).expect("Could not perform base64 decode");
+        let password_file =
+            ServerRegistration::<Default>::deserialize(&password_file_bytes).unwrap();
+        let mut server_rng = OsRng;
+        let key_pair = KEY_PAIR.lock().unwrap();
+        let server_private_key = key_pair.private();
+        ServerLogin::start(
+            &mut server_rng,
+            password_file,
+            &server_private_key,
+            CredentialRequest::deserialize(&credential_request_bytes[..]).unwrap(),
+            ServerLoginStartParameters::default(),
+        )
+        .unwrap()
+    }
+
+    pub fn login_finish(
+        &self,
+        server_login_bytes: &[u8],
+        credential_finalization_base64: &str,
+    ) -> Vec<u8> {
+        let credential_finalization_bytes = base64::decode(credential_finalization_base64)
+            .expect("Could not perform base64 deocde");
+        let server_login = ServerLogin::<Default>::deserialize(server_login_bytes).unwrap();
+        let server_login_finish_result = server_login
+            .finish(
+                CredentialFinalization::deserialize(&credential_finalization_bytes[..]).unwrap(),
+            )
+            .unwrap();
+        server_login_finish_result.session_key
+    }
 }
 
 impl std::default::Default for Opaque {
