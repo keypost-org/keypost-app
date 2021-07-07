@@ -10,7 +10,7 @@ base64 = "^0.13"
 curve25519-dalek = { version = "^3.1", default-features = false, features = ["std"] }
 # hmac = "^0.11"
 lazy_static = "^1.4"
-opaque-ke = "^0.5"
+opaque-ke = "^0.6"
 # pbkdf2 = "^0.8"
 rand = "^0.8"
 rocket = "^0.4"

@@ -56,10 +56,8 @@ fn logout() -> String {
 fn register_start(payload: Json<RegisterStart>) -> JsonValue {
     println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
-    let server_registration_start = opaque.server_side_registration_start(&payload.i);
+    let server_registration_start = opaque.server_side_registration_start(&payload.i, &payload.u);
     let nonce = rand::random::<u32>();
-    let server_registration_bytes = server_registration_start.state.serialize();
-    cache::insert(nonce, server_registration_bytes);
     let response_bytes = server_registration_start.message.serialize();
     let response = base64::encode(response_bytes);
     json!({ "id": &nonce, "o": &response })
@@ -69,10 +67,8 @@ fn register_start(payload: Json<RegisterStart>) -> JsonValue {
 #[post("/register/finish", format = "json", data = "<payload>")]
 fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
     println!("{:?}", &payload);
-    let server_registration_bytes = cache::get(&payload.id).expect("Could not find in cache!");
     let opaque = crypto::Opaque::new();
-    let password_file =
-        opaque.server_side_registration_finish(&payload.i, &server_registration_bytes);
+    let password_file = opaque.server_side_registration_finish(&payload.i);
     cache::add_user(payload.u.clone(), password_file);
     json!({ "id": &payload.id, "o": "ok" })
 }
@@ -82,7 +78,8 @@ fn login_start(payload: Json<LoginStart>) -> JsonValue {
     println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
     let password_file_bytes = cache::get_user(&payload.u).expect("Could not find in cache!");
-    let server_login_start_result = opaque.login_start(&password_file_bytes, &payload.i);
+    let server_login_start_result =
+        opaque.login_start(&payload.u, &password_file_bytes, &payload.i);
     let nonce = rand::random::<u32>();
     let server_login_bytes = server_login_start_result.state.serialize();
     cache::insert(nonce, server_login_bytes);
