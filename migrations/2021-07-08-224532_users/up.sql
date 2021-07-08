@@ -1,0 +1,9 @@
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR NOT NULL,
+  email VARCHAR NOT NULL,
+  psswd_file TEXT NOT NULL,
+  deleted BOOLEAN NOT NULL DEFAULT 'f',
+  inserted_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL
+)
