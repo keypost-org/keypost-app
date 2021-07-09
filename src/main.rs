@@ -1,6 +1,9 @@
 #![feature(decl_macro)]
 
 #[macro_use]
+extern crate diesel;
+extern crate dotenv;
+#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate rocket;
@@ -13,6 +16,10 @@ use rocket_contrib::serve::StaticFiles;
 
 mod cache;
 mod crypto;
+mod persistence;
+
+pub mod models;
+pub mod schema;
 
 /// https://github.com/SergioBenitez/Rocket/blob/08e5b6dd0dd9d723ca2bd4488ff4a9ef0af8b91b/examples/json/src/main.rs#L22
 #[derive(Debug, Deserialize, Serialize)]
@@ -100,6 +107,8 @@ fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
 
 /// https://github.com/SergioBenitez/Rocket/tree/v0.4.10/examples
 fn rocket() -> rocket::Rocket {
+    persistence::get_active_users().expect("Could not get users!");
+
     rocket::ignite()
         .mount(
             "/",
