@@ -49,6 +49,7 @@ pub fn add_user<'a>(username: &'a str, email: &'a str, psswd_file: &'a str) -> R
     };
 
     let connection = establish_connection();
+    //FIXME Don't allow duplicate username or email via DB constraints
     diesel::insert_into(users::table)
         .values(&new_user)
         .get_result(&connection)

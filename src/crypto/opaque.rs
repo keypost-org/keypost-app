@@ -10,6 +10,7 @@ use opaque_ke::{
 };
 
 lazy_static! {
+    //FIXME Generate this once and persist over restarts.
     static ref SERVER_SETUP: Mutex<ServerSetup<Default>> = {
         let mut server_rng = OsRng;
         let server_setup = ServerSetup::<Default>::new(&mut server_rng);

@@ -61,6 +61,7 @@ fn logout() -> String {
 /// curl -X POST -H "Content-Type: application/json" -d '{ "u": "jon", "i": "Zm9vYmFyCg==" }' http://localhost:8000/register/start
 #[post("/register/start", format = "json", data = "<payload>")]
 fn register_start(payload: Json<RegisterStart>) -> JsonValue {
+    //TODO Should we do a PKCE-type protocol instead of just a nonce? Maybe OPAQUE internals does this already?
     println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
     let server_registration_start = opaque.server_side_registration_start(&payload.i, &payload.u);
@@ -76,15 +77,34 @@ fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
     println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
     let password_file = opaque.server_side_registration_finish(&payload.i);
-    cache::add_user(payload.u.clone(), password_file);
-    json!({ "id": &payload.id, "o": "ok" })
+    match persistence::add_user(
+        &payload.u,
+        "fixme@foobar.com",
+        base64::encode(password_file).as_str(),
+    ) {
+        Ok(_user) => {
+            json!({ "id": &payload.id, "o": "ok" })
+        }
+        Err(err) => {
+            println!("Could not create new user! {}, {:?}", &payload.id, err);
+            json!({ "id": &payload.id, "o": "error" })
+        }
+    }
 }
 
 #[post("/login/start", format = "json", data = "<payload>")]
 fn login_start(payload: Json<LoginStart>) -> JsonValue {
+    //TODO Should we do a PKCE-type protocol instead of just a nonce? Maybe OPAQUE internals does this already?
     println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
-    let password_file_bytes = cache::get_user(&payload.u).expect("Could not find in cache!");
+    let user = persistence::find_user(&payload.u).expect("User not found!");
+    let password_file_bytes = user.map_or(
+        {
+            println!("No user in the database!");
+            vec![]
+        },
+        |user| base64::decode(user.psswd_file).expect("Could not base64 decode!"),
+    );
     let server_login_start_result =
         opaque.login_start(&payload.u, &password_file_bytes, &payload.i);
     let nonce = rand::random::<u32>();
