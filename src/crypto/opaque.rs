@@ -39,7 +39,7 @@ impl Opaque {
     pub fn server_side_registration_start(
         &self,
         registration_request_base64: &str,
-        username: &str,
+        email: &str,
     ) -> ServerRegistrationStartResult<Default> {
         let registration_request_bytes =
             base64::decode(registration_request_base64).expect("Could not perform base64 decode");
@@ -47,7 +47,7 @@ impl Opaque {
         ServerRegistration::<Default>::start(
             &server_setup,
             RegistrationRequest::deserialize(&registration_request_bytes[..]).unwrap(),
-            username.as_bytes(),
+            email.as_bytes(),
         )
         .unwrap()
     }
@@ -63,7 +63,7 @@ impl Opaque {
 
     pub fn login_start(
         &self,
-        username: &str,
+        email: &str,
         password_file_bytes: &[u8],
         credential_request_base64: &str,
     ) -> ServerLoginStartResult<Default> {
@@ -78,7 +78,7 @@ impl Opaque {
             &server_setup,
             Some(password_file),
             CredentialRequest::deserialize(&credential_request_bytes[..]).unwrap(),
-            &username.as_bytes(),
+            &email.as_bytes(),
             ServerLoginStartParameters::default(),
         )
         .unwrap()

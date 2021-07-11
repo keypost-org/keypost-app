@@ -17,36 +17,29 @@ pub fn get_active_users() -> Result<Vec<User>, Error> {
 
     println!("Displaying {} users", results.len());
     for user in &results {
-        println!(
-            "{}, {}, {}, {}",
-            user.id, user.username, user.email, user.psswd_file
-        );
+        println!("{}, {}, {}", user.id, user.email, user.psswd_file);
     }
 
     Ok(results)
 }
 
-pub fn find_user(username_: &str) -> Result<Option<User>, Error> {
+pub fn find_user(email_: &str) -> Result<Option<User>, Error> {
     use crate::schema::users::dsl::*;
 
     let connection = establish_connection();
     let results: Vec<User> = users
         .filter(deleted.eq(false))
-        .filter(username.eq(username_))
+        .filter(email.eq(email_))
         .limit(1)
         .load::<User>(&connection)?;
     let user: Option<User> = results.first().cloned();
     Ok(user)
 }
 
-pub fn add_user<'a>(username: &'a str, email: &'a str, psswd_file: &'a str) -> Result<User, Error> {
+pub fn add_user<'a>(email: &'a str, psswd_file: &'a str) -> Result<User, Error> {
     use crate::schema::users;
 
-    let new_user = NewUser {
-        username,
-        email,
-        psswd_file,
-    };
+    let new_user = NewUser { email, psswd_file };
 
     let connection = establish_connection();
     diesel::insert_into(users::table)

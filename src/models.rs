@@ -6,7 +6,6 @@ use diesel::pg::data_types::PgTimestamp;
 #[derive(Clone, Queryable)]
 pub struct User {
     pub id: i32,
-    pub username: String,
     pub email: String,
     pub psswd_file: String,
     pub deleted: bool,
@@ -17,7 +16,6 @@ pub struct User {
 #[derive(Clone, Insertable)]
 #[table_name = "users"]
 pub struct NewUser<'a> {
-    pub username: &'a str,
     pub email: &'a str,
     pub psswd_file: &'a str,
 }
