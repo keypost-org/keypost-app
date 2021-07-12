@@ -10,43 +10,18 @@ extern crate rocket;
 #[macro_use]
 extern crate serde_derive;
 
+use api::*;
 use rocket_contrib::json;
 use rocket_contrib::json::{Json, JsonValue};
 use rocket_contrib::serve::StaticFiles;
 
+mod api;
 mod cache;
 mod crypto;
 mod persistence;
 
 pub mod models;
 pub mod schema;
-
-/// https://github.com/SergioBenitez/Rocket/blob/08e5b6dd0dd9d723ca2bd4488ff4a9ef0af8b91b/examples/json/src/main.rs#L22
-#[derive(Debug, Deserialize, Serialize)]
-struct RegisterStart {
-    e: String,
-    i: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct RegisterFinish {
-    id: u32,
-    e: String,
-    i: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct LoginStart {
-    e: String,
-    i: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct LoginFinish {
-    id: u32,
-    e: String,
-    i: String,
-}
 
 /// curl -X POST -H "Content-Type: application/json" -d '{ "e": "jon@example.com", "i": "Zm9vYmFyCg==" }' http://localhost:8000/register/start
 #[post("/register/start", format = "json", data = "<payload>")]
