@@ -19,6 +19,7 @@ mod api;
 mod cache;
 mod crypto;
 mod persistence;
+mod util;
 
 pub mod models;
 pub mod schema;
@@ -99,5 +100,11 @@ fn rocket() -> rocket::Rocket {
 }
 
 fn main() {
+    init().expect("Could not initialize app before launching rocket!");
     rocket().launch();
+}
+
+fn init() -> Result<(), std::io::Error> {
+    crypto::init()?;
+    Ok(())
 }

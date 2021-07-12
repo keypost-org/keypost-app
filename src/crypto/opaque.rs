@@ -11,6 +11,7 @@ use opaque_ke::{
 
 lazy_static! {
     //FIXME Generate this once and persist over restarts.
+    //Use https://docs.rs/opaque-ke/0.6.0/opaque_ke/struct.ServerSetup.html#method.serialize (and deserialzie) at startup
     static ref SERVER_SETUP: Mutex<ServerSetup<Default>> = {
         let mut server_rng = OsRng;
         let server_setup = ServerSetup::<Default>::new(&mut server_rng);
