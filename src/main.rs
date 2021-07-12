@@ -48,16 +48,6 @@ struct LoginFinish {
     i: String,
 }
 
-#[get("/login")]
-fn login() -> String {
-    "WIP...".to_string()
-}
-
-#[get("/logout")]
-fn logout() -> String {
-    "Goodbye!".to_string()
-}
-
 /// curl -X POST -H "Content-Type: application/json" -d '{ "e": "jon@example.com", "i": "Zm9vYmFyCg==" }' http://localhost:8000/register/start
 #[post("/register/start", format = "json", data = "<payload>")]
 fn register_start(payload: Json<RegisterStart>) -> JsonValue {
@@ -128,14 +118,7 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount(
             "/",
-            routes![
-                login,
-                logout,
-                register_start,
-                register_finish,
-                login_start,
-                login_finish
-            ],
+            routes![register_start, register_finish, login_start, login_finish],
         )
         .mount("/", StaticFiles::from("static").rank(-1))
 }
