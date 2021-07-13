@@ -59,14 +59,10 @@ fn login_start(payload: Json<LoginStart>) -> JsonValue {
     //TODO Should we do a PKCE-type protocol instead of just a nonce? Maybe OPAQUE internals does this already?
     println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
-    let user = persistence::find_user(&payload.e).expect("User not found!");
-    let password_file_bytes = user.map_or(
-        {
-            println!("No user in the database!");
-            vec![]
-        },
-        |user| base64::decode(user.psswd_file).expect("Could not base64 decode!"),
-    );
+    let user = persistence::find_user(&payload.e)
+        .expect("No User result!")
+        .expect("User not found!");
+    let password_file_bytes = base64::decode(user.psswd_file).expect("Could not base64 decode!");
     let server_login_start_result =
         opaque.login_start(&payload.e, &password_file_bytes, &payload.i);
     let nonce = rand::random::<u32>();
