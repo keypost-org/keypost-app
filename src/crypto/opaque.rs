@@ -9,12 +9,37 @@ use opaque_ke::{
     CredentialFinalization, CredentialRequest, ServerLogin, ServerLoginStartParameters,
 };
 
+use crate::util;
+
 lazy_static! {
-    //FIXME Generate this once and persist over restarts.
-    //Use https://docs.rs/opaque-ke/0.6.0/opaque_ke/struct.ServerSetup.html#method.serialize (and deserialzie) at startup
     static ref SERVER_SETUP: Mutex<ServerSetup<Default>> = {
-        let mut server_rng = OsRng;
-        let server_setup = ServerSetup::<Default>::new(&mut server_rng);
+        let server_setup_location = util::default_dir() + "/server_setup.private";
+        let server_setup = match util::read_file(&server_setup_location) {
+            Ok(bytes) => {
+                println!("DEBUG: Found server_setup file");
+                ServerSetup::<Default>::deserialize(&bytes).unwrap_or_else(|err| {
+                    println!("ERROR: {:?}", err);
+                    panic!(
+                        "Could not deserialize bytes from file {}",
+                        &server_setup_location
+                    )
+                })
+            }
+            Err(err) => {
+                println!("DEBUG: Could not find server_setup file - error: {:?}", err);
+                let mut server_rng = OsRng;
+                let server_setup = ServerSetup::<Default>::new(&mut server_rng);
+                util::write_to_file(&server_setup_location, &server_setup.serialize())
+                    .unwrap_or_else(|err| {
+                        println!("ERROR: {:?}", err);
+                        panic!(
+                            "Could not write server_setup file to {}",
+                            &server_setup_location
+                        )
+                    });
+                server_setup
+            }
+        };
         Mutex::new(server_setup)
     };
 }
