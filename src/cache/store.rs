@@ -14,7 +14,18 @@ pub fn insert(k: u32, v: Vec<u8>) {
     cache.insert(k, v);
 }
 
+pub fn insert_str(k: u32, s: &str) {
+    let v = s.as_bytes().to_vec();
+    let mut cache = CACHE.lock().unwrap();
+    cache.insert(k, v);
+}
+
 pub fn get(k: &u32) -> Option<Vec<u8>> {
     let cache = CACHE.lock().unwrap();
     cache.get(k).cloned()
+}
+
+pub fn get_str(k: &u32) -> Option<String> {
+    let cache = CACHE.lock().unwrap();
+    cache.get(k).map(|v| String::from_utf8_lossy(v).to_string())
 }
