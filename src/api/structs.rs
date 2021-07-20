@@ -7,6 +7,7 @@
 pub struct RegisterStart {
     pub e: String,
     pub i: String,
+    pub c: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -14,6 +15,7 @@ pub struct RegisterFinish {
     pub id: u32,
     pub e: String,
     pub i: String,
+    pub v: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

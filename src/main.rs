@@ -27,11 +27,11 @@ pub mod schema;
 /// curl -X POST -H "Content-Type: application/json" -d '{ "e": "jon@example.com", "i": "Zm9vYmFyCg==" }' http://localhost:8000/register/start
 #[post("/register/start", format = "json", data = "<payload>")]
 fn register_start(payload: Json<RegisterStart>) -> JsonValue {
-    //TODO Should we do a PKCE-type protocol instead of just a nonce? Maybe OPAQUE internals does this already?
     println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
     let server_registration_start = opaque.server_side_registration_start(&payload.i, &payload.e);
     let nonce = rand::random::<u32>();
+    cache::insert_str(nonce, &payload.c);
     let response_bytes = server_registration_start.message.serialize();
     let response = base64::encode(response_bytes);
     json!({ "id": &nonce, "o": &response })
@@ -41,6 +41,18 @@ fn register_start(payload: Json<RegisterStart>) -> JsonValue {
 #[post("/register/finish", format = "json", data = "<payload>")]
 fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
     println!("{:?}", &payload);
+
+    match cache::get_str(&payload.id) {
+        Some(expected_challenge) => {
+            let verifier = base64::decode(&payload.v).expect("Could not base64 decode payload.v!");
+            let actual_challenge = pkce::code_challenge(&verifier);
+            if expected_challenge != actual_challenge {
+                return json!({ "id": &payload.id, "o": "bad_nonce_or_code_verifier" });
+            }
+        }
+        None => return json!({ "id": &payload.id, "o": "bad_nonce_or_code_verifier" }),
+    }
+
     let opaque = crypto::Opaque::new();
     let password_file = opaque.server_side_registration_finish(&payload.i);
     match persistence::add_user(&payload.e, base64::encode(password_file).as_str()) {
