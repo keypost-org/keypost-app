@@ -5,15 +5,20 @@ sudo apt-get -y install postgresql postgresql-contrib libpq-dev
 sudo -i -u postgres
 createuser keypost --superuser
 createdb keypost
-exit
+exit #FIXME script exits as user postgres and keypost user and db weren't created.
+
+### BELOW COMMANDS ARE TO BE EXECUTED MANUALLY:
+
 sudo adduser keypost
 ### Wherever you see "changeme", replace with your own strong password
+sudo -su keypost
 psql -d keypost # ALTER ROLE keypost WITH PASSWORD 'changeme';
 
 ### https://diesel.rs/guides/getting-started
 cargo install diesel_cli --no-default-features --features postgres --verbose
 export KEYPOST_DATABASE_PSSWD=changme
 export DATABASE_URL=postgres://keypost:${KEYPOST_DATABASE_PSSWD}@localhost/keypost
+diesel migration run
 
 ### Only run below if the migrations directory is empty:
 # diesel setup 
