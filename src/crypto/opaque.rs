@@ -49,7 +49,8 @@ lazy_static! {
 #[allow(dead_code)]
 pub struct Default;
 impl CipherSuite for Default {
-    type Group = RistrettoPoint;
+    type OprfGroup = RistrettoPoint;
+    type KeGroup = RistrettoPoint;
     type KeyExchange = opaque_ke::key_exchange::tripledh::TripleDH;
     type Hash = sha2::Sha512;
     type SlowHash = opaque_ke::slow_hash::NoOpHash;
