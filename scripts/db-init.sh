@@ -1,42 +1,46 @@
 #!/bin/bash
+
 ### https://www.digitalocean.com/community/tutorials/how-to-install-and-use-postgresql-on-ubuntu-20-04
+
+echo "This script is to be executed manually per section as needed (Linux only)."
+exit 1
 
 sudo apt-get -y install postgresql postgresql-contrib libpq-dev
 sudo -i -u postgres
 createuser keypost --superuser
 createdb keypost
-exit #FIXME script exits as user postgres and keypost user and db weren't created.
 
-### BELOW COMMANDS ARE TO BE EXECUTED MANUALLY:
+###############################################################
+### BELOW COMMANDS ARE TO BE EXECUTED MANUALLY (Linux only) ###
+###############################################################
 
-sudo adduser keypost
-### Wherever you see "changeme", replace with your own strong password
+sudo adduser keypost --no-create-home --disabled-login
 sudo -su keypost
-psql -d keypost # ALTER ROLE keypost WITH PASSWORD 'changeme';
+psql -d keypost # ALTER ROLE keypost WITH PASSWORD 'change-me-to-something-secret';
 
 ### https://diesel.rs/guides/getting-started
 cargo install diesel_cli --no-default-features --features postgres --verbose
-export KEYPOST_DATABASE_PSSWD=changme
+export KEYPOST_DATABASE_PSSWD=change-me-to-something-secret
 export DATABASE_URL=postgres://keypost:${KEYPOST_DATABASE_PSSWD}@localhost/keypost
 diesel migration run
 
 ### Only run below if the migrations directory is empty:
-# diesel setup 
+diesel setup 
 
 ### Now you'll have to find the most current database schema to recreate the database:
-# diesel migration generate keypost_schema
+diesel migration generate keypost_schema
 
 ### Paste the most recent schema into up.sql in the "migrations/<timestamp>_keypost_schema" directory then run:
-# diesel migration run
+diesel migration run
 
 ### Become the keypost user:
-# sudo -u keypost
+sudo -u keypost
 
 ### Login to the database and verify the tables are created:
-# psql -d keypost
+psql -d keypost
 
 ### Start the app and verify its functionality:
-# cargo run
+cargo run
 
 ### NOTES
 #  - "The diesel_migrations crate provides the embed_migrations! macro, allowing you to embed migration scripts in 
