@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use curve25519_dalek::ristretto::RistrettoPoint;
+// use curve25519_dalek::ristretto::RistrettoPoint;
 use opaque_ke::{
     ciphersuite::CipherSuite, rand::rngs::OsRng, RegistrationRequest, RegistrationUpload,
     ServerLoginStartResult, ServerRegistration, ServerRegistrationStartResult, ServerSetup,
@@ -46,14 +46,21 @@ lazy_static! {
 
 // The ciphersuite trait allows to specify the underlying primitives
 // that will be used in the OPAQUE protocol
-#[allow(dead_code)]
 pub struct Default;
+
+// #[cfg(feature = "ristretto255")]
+// impl CipherSuite for Default {
+//     type OprfCs = opaque_ke::Ristretto255;
+//     type KeGroup = opaque_ke::Ristretto255;
+//     type KeyExchange = opaque_ke::key_exchange::tripledh::TripleDh;
+//     type Ksf = opaque_ke::ksf::Identity;
+// }
+
 impl CipherSuite for Default {
-    type OprfGroup = RistrettoPoint;
-    type KeGroup = RistrettoPoint;
-    type KeyExchange = opaque_ke::key_exchange::tripledh::TripleDH;
-    type Hash = sha2::Sha512;
-    type SlowHash = opaque_ke::slow_hash::NoOpHash;
+    type OprfCs = p256::NistP256;
+    type KeGroup = p256::NistP256;
+    type KeyExchange = opaque_ke::key_exchange::tripledh::TripleDh;
+    type Ksf = opaque_ke::ksf::Identity;
 }
 
 pub struct Opaque {}
@@ -85,7 +92,7 @@ impl Opaque {
         let password_file = ServerRegistration::finish(
             RegistrationUpload::<Default>::deserialize(&client_message_bytes[..]).unwrap(),
         );
-        password_file.serialize()
+        password_file.serialize().to_vec()
     }
 
     pub fn login_start(
@@ -97,7 +104,7 @@ impl Opaque {
         let credential_request_bytes =
             base64::decode(credential_request_base64).expect("Could not perform base64 decode");
         let password_file =
-            ServerRegistration::<Default>::deserialize(&password_file_bytes).unwrap();
+            ServerRegistration::<Default>::deserialize(password_file_bytes).unwrap();
         let mut server_rng = OsRng;
         let server_setup = SERVER_SETUP.lock().unwrap();
         ServerLogin::start(
@@ -105,7 +112,7 @@ impl Opaque {
             &server_setup,
             Some(password_file),
             CredentialRequest::deserialize(&credential_request_bytes[..]).unwrap(),
-            &email.as_bytes(),
+            email.as_bytes(),
             ServerLoginStartParameters::default(),
         )
         .unwrap()
@@ -124,7 +131,7 @@ impl Opaque {
                 CredentialFinalization::deserialize(&credential_finalization_bytes[..]).unwrap(),
             )
             .unwrap();
-        server_login_finish_result.session_key
+        server_login_finish_result.session_key.to_vec()
     }
 }
 

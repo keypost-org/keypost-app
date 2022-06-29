@@ -7,15 +7,16 @@ edition = "2018"
 
 [dependencies]
 base64 = "^0.13"
-curve25519-dalek = { version = "^3.1", default-features = false, features = ["std"] }
+curve25519-dalek = { version = "=4.0.0-pre.1", default-features = false, optional = true }
 diesel = { version = "^1.4", default-features = false, features = ["postgres"] }
-diesel_cli = { version = "^1.4", default-features = false, features = ["postgres"] }
+# diesel_cli = { version = "^1.4", default-features = false, features = ["postgres"] }
 # diesel_migrations = "^1.4"
 dotenv = "^0.15"
 # hmac = "^0.12"
 lazy_static = "^1.4"
-opaque-ke = { git = "https://github.com/novifinancial/opaque-ke", ref = "v2.0.0-pre.2" }
+opaque-ke = { git = "https://github.com/novifinancial/opaque-ke", tag = "v2.0.0-pre.2" }
 # pbkdf2 = "^0.8"
+p256 = { version = "=0.11.0-pre.0", default-features = false, features = ["hash2curve", "voprf"] }
 pkce = "^0.1"
 rand = "^0.8"
 rocket = "0.4.10"
@@ -25,3 +26,4 @@ serde_derive = "^1.0"
 serde_json = "^1.0"
 sha2 = "^0.9"
 # yubihsm = "^0.38"
+zeroize = { version = "1.5", features = ["zeroize_derive"] }

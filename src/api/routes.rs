@@ -60,7 +60,7 @@ pub fn login_start(payload: Json<LoginStart>) -> JsonValue {
     let server_login_start_result =
         opaque.login_start(&payload.e, &password_file_bytes, &payload.i);
     let nonce = rand::random::<u32>();
-    let server_login_bytes = server_login_start_result.state.serialize();
+    let server_login_bytes = server_login_start_result.state.serialize().to_vec();
     cache::insert(nonce, server_login_bytes);
     let response_bytes = server_login_start_result.message.serialize();
     let response = base64::encode(response_bytes);
