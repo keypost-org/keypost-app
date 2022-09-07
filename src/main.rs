@@ -32,7 +32,8 @@ fn rocket() -> rocket::Rocket {
                 api::register_start,
                 api::register_finish,
                 api::login_start,
-                api::login_finish
+                api::login_finish,
+                api::options
             ],
         )
         .mount("/", StaticFiles::from("static").rank(-1))

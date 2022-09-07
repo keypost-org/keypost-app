@@ -76,3 +76,9 @@ pub fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
     let response = base64::encode(response_bytes);
     json!({ "id": &payload.id, "o": &response })
 }
+
+// To allow (also need a browser extension) CORS during development (-web requests to -app, localhost on different ports)
+#[options("/register/start")]
+pub fn options() -> JsonValue {
+    json!({})
+}
