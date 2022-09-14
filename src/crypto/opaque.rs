@@ -77,7 +77,7 @@ impl Opaque {
     ) -> ServerRegistrationStartResult<Default> {
         let registration_request_bytes =
             base64::decode(registration_request_base64).expect("Could not perform base64 decode");
-        let server_setup = SERVER_SETUP.lock().unwrap();
+        let server_setup = SERVER_SETUP.lock().unwrap(); // FIXME https://doc.rust-lang.org/stable/std/sync/struct.Mutex.html#poisoning
         ServerRegistration::<Default>::start(
             &server_setup,
             RegistrationRequest::deserialize(&registration_request_bytes[..]).unwrap(),
