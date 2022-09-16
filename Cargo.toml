@@ -27,3 +27,6 @@ serde_json = "^1.0"
 sha2 = "^0.9"
 # yubihsm = "^0.38"
 zeroize = { version = "1.5", features = ["zeroize_derive"] }
+
+[features]
+ristretto255 = []
