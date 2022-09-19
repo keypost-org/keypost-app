@@ -56,8 +56,6 @@ impl CipherSuite for Default {
     type Ksf = opaque_ke::ksf::Identity;
 }
 
-// pub struct NistP256;
-
 #[cfg(not(feature = "ristretto255"))]
 impl CipherSuite for Default {
     type OprfCs = p256::NistP256;
