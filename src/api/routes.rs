@@ -78,7 +78,23 @@ pub fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
 }
 
 // To allow (also need a browser extension) CORS during development (-web requests to -app, localhost on different ports)
+// TODO Add a build cfg feature around this for local (i.e. non_production) builds only
 #[options("/register/start")]
-pub fn options() -> JsonValue {
+pub fn options_rs() -> JsonValue {
+    json!({})
+}
+
+#[options("/register/finish")]
+pub fn options_rf() -> JsonValue {
+    json!({})
+}
+
+#[options("/login/start")]
+pub fn options_ls() -> JsonValue {
+    json!({})
+}
+
+#[options("/login/finish")]
+pub fn options_lf() -> JsonValue {
     json!({})
 }
