@@ -6,7 +6,7 @@ use crate::cache;
 use crate::crypto;
 use crate::persistence;
 
-/// curl -X POST -H "Content-Type: application/json" -d '{ "e": "jon@example.com", "i": "Zm9vYmFyCg==" }' http://localhost:8000/register/start
+/// curl -X POST -H "Content-Type: application/json" -d '{ "e": "jon@example.com", "i": "Zm9vYmFyCg==", "c": "pkce_challenge" }' http://localhost:8000/register/start
 #[post("/register/start", format = "json", data = "<payload>")]
 pub fn register_start(payload: Json<RegisterStart>) -> JsonValue {
     println!("{:?}", &payload);
@@ -19,7 +19,7 @@ pub fn register_start(payload: Json<RegisterStart>) -> JsonValue {
     json!({ "id": &nonce, "o": &response })
 }
 
-/// curl -X POST -H "Content-Type: application/json" -d '{ "id": 1234, "e": "jon@example.com", "i": "Zm9vYmFyCg==" }' http://localhost:8000/register/finish
+/// curl -X POST -H "Content-Type: application/json" -d '{ "id": 1234, "e": "jon@example.com", "i": "Zm9vYmFyCg==", "v": "pkce_verifier" }' http://localhost:8000/register/finish
 #[post("/register/finish", format = "json", data = "<payload>")]
 pub fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
     println!("{:?}", &payload);
