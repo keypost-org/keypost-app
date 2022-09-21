@@ -34,7 +34,7 @@ diesel migration generate keypost_schema
 diesel migration run
 
 ### Become the keypost user:
-sudo -u keypost
+sudo -su keypost
 
 ### Login to the database and verify the tables are created:
 psql -d keypost
