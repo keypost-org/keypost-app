@@ -2,11 +2,9 @@ use std::sync::Mutex;
 
 // use curve25519_dalek::ristretto::RistrettoPoint;
 use opaque_ke::{
-    ciphersuite::CipherSuite, rand::rngs::OsRng, RegistrationRequest, RegistrationUpload,
+    ciphersuite::CipherSuite, rand::rngs::OsRng, CredentialFinalization, CredentialRequest,
+    Identifiers, RegistrationRequest, RegistrationUpload, ServerLogin, ServerLoginStartParameters,
     ServerLoginStartResult, ServerRegistration, ServerRegistrationStartResult, ServerSetup,
-};
-use opaque_ke::{
-    CredentialFinalization, CredentialRequest, ServerLogin, ServerLoginStartParameters,
 };
 
 use crate::util;
@@ -114,7 +112,13 @@ impl Opaque {
             Some(password_file),
             CredentialRequest::deserialize(&credential_request_bytes[..]).unwrap(),
             email.as_bytes(),
-            ServerLoginStartParameters::default(),
+            ServerLoginStartParameters {
+                context: None,
+                identifiers: Identifiers {
+                    client: None,
+                    server: None,
+                },
+            },
         )
         .unwrap()
     }
