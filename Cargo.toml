@@ -14,7 +14,7 @@ diesel = { version = "^1.4", default-features = false, features = ["postgres"] }
 dotenv = "^0.15"
 # hmac = "^0.12"
 lazy_static = "^1.4"
-opaque-ke = { git = "https://github.com/novifinancial/opaque-ke", tag = "v2.0.0-pre.3" }
+opaque-ke = { git = "https://github.com/novifinancial/opaque-ke", tag = "v2.0.0" }
 # pbkdf2 = "^0.8"
 p256 = { version = "^0.11", default-features = false, features = ["hash2curve", "voprf"] }
 pkce = "^0.1"

@@ -819,8 +819,8 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "opaque-ke"
-version = "2.0.0-pre.3"
-source = "git+https://github.com/novifinancial/opaque-ke?tag=v2.0.0-pre.3#9ce5d8d191add692d033293de02d37c610da608c"
+version = "2.0.0"
+source = "git+https://github.com/novifinancial/opaque-ke?tag=v2.0.0#556f6c2bd43123b20110f0a9bace8c5f91643328"
 dependencies = [
  "curve25519-dalek",
  "derive-where",
