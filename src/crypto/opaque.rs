@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-// use curve25519_dalek::ristretto::RistrettoPoint;
+use opaque_ke::errors::ProtocolError;
 use opaque_ke::{
     ciphersuite::CipherSuite, rand::rngs::OsRng, CredentialFinalization, CredentialRequest,
     Identifiers, RegistrationRequest, RegistrationUpload, ServerLogin, ServerLoginStartParameters,
@@ -127,16 +127,14 @@ impl Opaque {
         &self,
         server_login_bytes: &[u8],
         credential_finalization_base64: &str,
-    ) -> Vec<u8> {
+    ) -> Result<(), ProtocolError> {
         let credential_finalization_bytes = base64::decode(credential_finalization_base64)
             .expect("Could not perform base64 deocde");
         let server_login = ServerLogin::<Default>::deserialize(server_login_bytes).unwrap();
-        let server_login_finish_result = server_login
-            .finish(
-                CredentialFinalization::deserialize(&credential_finalization_bytes[..]).unwrap(),
-            )
-            .unwrap();
-        server_login_finish_result.session_key.to_vec()
+        server_login.finish(CredentialFinalization::deserialize(
+            &credential_finalization_bytes[..],
+        )?)?;
+        Ok(())
     }
 }
 

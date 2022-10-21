@@ -72,9 +72,17 @@ pub fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
     println!("{:?}", &payload);
     let server_login_bytes = cache::get(&payload.id).unwrap();
     let opaque = crypto::Opaque::new();
-    let response_bytes = opaque.login_finish(&server_login_bytes, &payload.i);
-    let response = base64::encode(response_bytes);
-    json!({ "id": &payload.id, "o": &response })
+    match opaque.login_finish(&server_login_bytes, &payload.i) {
+        Ok(()) => json!({ "id": &payload.id, "o": "Success" }),
+        Err(err) => {
+            println!(
+                "Error during login: id={}, {}",
+                &payload.id,
+                format!("{:?}", err)
+            );
+            json!({ "id": &payload.id, "o": "Failed" })
+        }
+    }
 }
 
 // To allow (also need a browser extension) CORS during development (-web requests to -app, localhost on different ports)
