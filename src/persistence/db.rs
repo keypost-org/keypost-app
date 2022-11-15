@@ -4,6 +4,7 @@ use diesel::result::Error;
 use dotenv::dotenv;
 use std::env;
 
+use crate::cache;
 use crate::models::{NewUser, User};
 
 pub fn get_active_users() -> Result<Vec<User>, Error> {
@@ -45,6 +46,25 @@ pub fn add_user<'a>(email: &'a str, psswd_file: &'a str) -> Result<User, Error> 
     diesel::insert_into(users::table)
         .values(&new_user)
         .get_result(&connection)
+}
+
+pub fn store_locker_contents(
+    email: &str,
+    locker_id: &str,
+    psswd_file: &[u8],
+    ciphertext: &[u8],
+) -> Result<(), Error> {
+    // TODO
+    cache::insert(1, psswd_file.to_vec());
+    cache::insert(2, ciphertext.to_vec());
+    Ok(())
+}
+
+pub fn fetch_locker_contents(email: &str, locker_id: &str) -> Result<(Vec<u8>, Vec<u8>), Error> {
+    // TODO
+    let psswd_file = cache::get(&1);
+    let ciphertext = cache::get(&2);
+    Ok((psswd_file.unwrap(), ciphertext.unwrap()))
 }
 
 fn establish_connection() -> PgConnection {

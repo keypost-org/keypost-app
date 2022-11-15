@@ -7,6 +7,9 @@ use opaque_ke::{
     ServerLoginStartResult, ServerRegistration, ServerRegistrationStartResult, ServerSetup,
 };
 
+use crate::cache;
+use crate::crypto;
+use crate::persistence;
 use crate::util;
 
 lazy_static! {
@@ -137,6 +140,92 @@ impl Opaque {
             &credential_finalization_bytes[..],
         )?)?;
         Ok(())
+    }
+
+    pub fn register_locker_start(
+        &self,
+        locker_id: &str,
+        registration_request_bytes: &[u8],
+    ) -> Result<String, ProtocolError> {
+        let server_setup = SERVER_SETUP.lock().unwrap();
+        let server_registration_start_result = ServerRegistration::<DefaultCipherSuite>::start(
+            &server_setup,
+            RegistrationRequest::deserialize(registration_request_bytes)?,
+            locker_id.as_bytes(),
+        )
+        .unwrap();
+        let registration_response_bytes = server_registration_start_result
+            .message
+            .serialize()
+            .to_vec();
+        Ok(base64::encode(registration_response_bytes))
+    }
+
+    pub fn register_locker_finish(
+        &self,
+        locker_id: &str,
+        email: &str,
+        message: &[u8],
+        ciphertext: &[u8],
+    ) -> Result<(), ProtocolError> {
+        let server_registration: ServerRegistration<DefaultCipherSuite> =
+            ServerRegistration::finish(RegistrationUpload::<DefaultCipherSuite>::deserialize(
+                message,
+            )?);
+        let password_file = server_registration.serialize().to_vec();
+        persistence::store_locker_contents(email, locker_id, &password_file, ciphertext)
+            .unwrap_or_else(|_| panic!("Could not store locker contents: {:?}", locker_id));
+        Ok(())
+    }
+
+    pub fn open_locker_start(
+        &self,
+        locker_id: &str,
+        credential_request_bytes: &[u8],
+        locker_password_file: &[u8],
+        nonce: u32,
+    ) -> Result<String, ProtocolError> {
+        let server_setup = SERVER_SETUP.lock().unwrap();
+        let password_file =
+            ServerRegistration::<DefaultCipherSuite>::deserialize(locker_password_file).unwrap();
+        let mut server_rng = OsRng;
+        let server_login_start_result: ServerLoginStartResult<DefaultCipherSuite> =
+            ServerLogin::start(
+                &mut server_rng,
+                &server_setup,
+                Some(password_file),
+                CredentialRequest::deserialize(credential_request_bytes).unwrap(),
+                locker_id.as_bytes(),
+                ServerLoginStartParameters::default(),
+            )
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Could not execute ServerLogin::start: {:?}, {:?}",
+                    locker_id, nonce
+                )
+            });
+        let credential_response_bytes = server_login_start_result.message.serialize().to_vec();
+        cache::insert(nonce, server_login_start_result.state.serialize().to_vec());
+        Ok(base64::encode(credential_response_bytes))
+    }
+
+    pub fn open_locker_finish(
+        &self,
+        locker_contents: &[u8], // same as ciphertext
+        credential_finalization_bytes: &[u8],
+        server_login_bytes: &[u8],
+    ) -> Result<Vec<u8>, ProtocolError> {
+        let server_login_state =
+            ServerLogin::<DefaultCipherSuite>::deserialize(server_login_bytes)?;
+        let server_login_finish_result = server_login_state.finish(
+            CredentialFinalization::deserialize(credential_finalization_bytes)?,
+        )?;
+
+        // Server sends locker contents, encrypted under the session key, to the client
+        let encrypted_locker_contents =
+            crypto::encrypt_locker(&server_login_finish_result.session_key, locker_contents);
+
+        Ok(encrypted_locker_contents)
     }
 }
 

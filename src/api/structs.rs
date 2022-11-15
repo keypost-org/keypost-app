@@ -30,3 +30,33 @@ pub struct LoginFinish {
     pub e: String,
     pub i: String,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RegisterLockerStart {
+    pub id: String,
+    pub e: String,
+    pub i: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RegisterLockerFinish {
+    pub id: String,
+    pub e: String,
+    pub i: String,
+    pub c: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OpenLockerStart {
+    pub id: String,
+    pub e: String,
+    pub i: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OpenLockerFinish {
+    pub id: String,
+    pub e: String,
+    pub i: String,
+    pub n: u32,
+}

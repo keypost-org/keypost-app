@@ -1,10 +1,12 @@
 use rocket_contrib::json;
 use rocket_contrib::json::{Json, JsonValue};
 
-use crate::api::{LoginFinish, LoginStart, RegisterFinish, RegisterStart};
+use crate::api::*;
 use crate::cache;
 use crate::crypto;
 use crate::persistence;
+
+//TODO Implement http status code for 500 errors
 
 /// curl -X POST -H "Content-Type: application/json" -d '{ "e": "jon@example.com", "i": "Zm9vYmFyCg==", "c": "pkce_challenge" }' http://localhost:8000/register/start
 #[post("/register/start", format = "json", data = "<payload>")]
@@ -81,6 +83,77 @@ pub fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
                 format!("{:?}", err)
             );
             json!({ "id": &payload.id, "o": "Failed" })
+        }
+    }
+}
+
+#[post("/locker/register/start", format = "json", data = "<payload>")]
+pub fn register_locker_start(payload: Json<RegisterLockerStart>) -> JsonValue {
+    let id = &payload.id;
+    let _email = &payload.e;
+    let input = base64::decode(&payload.i).expect("Could not base64 decode!");
+    let opaque = crypto::Opaque::new();
+    match opaque.register_locker_start(id, &input) {
+        Ok(output) => json!({ "id": 0, "o": output }),
+        Err(err) => {
+            println!("Error in register_locker_start: {:?}", err);
+            json!({ "id": 0, "o": "There was an error during register_locker_start" })
+        }
+    }
+}
+
+#[post("/locker/register/finish", format = "json", data = "<payload>")]
+pub fn register_locker_finish(payload: Json<RegisterLockerFinish>) -> JsonValue {
+    let id = &payload.id;
+    let email = &payload.e;
+    let input = base64::decode(&payload.i).expect("Could not base64 decode!");
+    let ciphertext = base64::decode(&payload.c).expect("Could not base64 decode!");
+    let opaque = crypto::Opaque::new();
+    match opaque.register_locker_finish(id, email, &input, &ciphertext) {
+        Ok(()) => json!({ "id": 0, "o": "Success" }),
+        Err(err) => {
+            println!("Error in register_locker_finish: {:?}", err);
+            json!({ "id": 0, "o": "There was an error during register_locker_finish" })
+        }
+    }
+}
+
+#[post("/locker/open/start", format = "json", data = "<payload>")]
+pub fn open_locker_start(payload: Json<OpenLockerStart>) -> JsonValue {
+    let locker_id = payload.id.as_str();
+    let email = payload.e.as_str();
+    let input = base64::decode(&payload.i).expect("Could not base64 decode!");
+    let (locker_psswd_file, _ciphertext) = persistence::fetch_locker_contents(email, locker_id)
+        .expect("Could not get locker_contents");
+    let nonce: u32 = crypto::create_nonce();
+    let opaque = crypto::Opaque::new();
+    match opaque.open_locker_start(locker_id, &input, &locker_psswd_file, nonce) {
+        Ok(output) => json!({ "id": 0, "o": output, "n": nonce }),
+        Err(err) => {
+            println!("Error in open_locker_start: {:?}", err);
+            json!({ "id": 0, "o": "There was an error during open_locker_start", "n": nonce })
+        }
+    }
+}
+
+#[post("/locker/open/finish", format = "json", data = "<payload>")]
+pub fn open_locker_finish(payload: Json<OpenLockerFinish>) -> JsonValue {
+    let locker_id = &payload.id;
+    let email = &payload.e;
+    let (_locker_psswd_file, ciphertext) = persistence::fetch_locker_contents(email, locker_id)
+        .expect("Could not get locker_contents");
+    let input = base64::decode(&payload.i).expect("Could not base64 decode!");
+    let nonce = payload.n;
+    let server_login_bytes: Vec<u8> = cache::get(&nonce)
+        .unwrap_or_else(|| panic!("Could not find cached server_login_bytes: {:?}", nonce));
+    let opaque = crypto::Opaque::new();
+    match opaque.open_locker_finish(&ciphertext, &input, &server_login_bytes) {
+        Ok(encrypted_ciphertext) => {
+            json!({ "id": 0, "o": base64::encode(encrypted_ciphertext), "n": 0 })
+        }
+        Err(err) => {
+            println!("Error in open_locker_finish: {:?}", err);
+            json!({ "id": 0, "o": "There was an error during open_locker_finish", "n": nonce })
         }
     }
 }
