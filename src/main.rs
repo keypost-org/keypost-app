@@ -43,7 +43,7 @@ fn rocket() -> rocket::Rocket {
                 api::options_lf
             ],
         )
-        .mount("/", StaticFiles::from("static").rank(-1))
+        .mount("/", StaticFiles::from("static/dist").rank(-1))
 }
 
 fn main() {

@@ -12,3 +12,23 @@
  - To create a database migration, `diesel migration generate <name-of-db-actions-you-want-to-do>`
  - To run migration(s), `diesel migration run` (to run `down.sql` and then `up.sql`, run `diesel migration redo`)
  - To start with a clean database, run `diesel database reset`
+
+## Web
+
+### Setup
+ - Built based on https://webpack.js.org/guides/getting-started/
+```
+cd static
+npm install webpack webpack-cli --save-dev
+npm install --save-dev html-webpack-plugin
+npm install --save lodash
+npm install --save-dev style-loader css-loader
+
+```
+
+### Build
+```
+npm run build
+```
+
+### Deploy
