@@ -12,6 +12,7 @@
  - To create a database migration, `diesel migration generate <name-of-db-actions-you-want-to-do>`
  - To run migration(s), `diesel migration run` (to run `down.sql` and then `up.sql`, run `diesel migration redo`)
  - To start with a clean database, run `diesel database reset`
+ - Additional `diesel` documentation can be found [here](https://diesel.rs/guides/) and examples [here](https://github.com/diesel-rs/diesel/tree/master/examples/postgres)
 
 ## Web
 
