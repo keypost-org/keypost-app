@@ -174,7 +174,9 @@ impl Opaque {
             )?);
         let password_file = server_registration.serialize().to_vec();
         persistence::store_locker_contents(email, locker_id, &password_file, ciphertext)
-            .unwrap_or_else(|_| panic!("Could not store locker contents: {:?}", locker_id));
+            .unwrap_or_else(|err| {
+                panic!("Could not store locker {} contents: {:?}", locker_id, err)
+            });
         Ok(())
     }
 
