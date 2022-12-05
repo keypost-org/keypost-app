@@ -31,4 +31,10 @@ npm install --save-dev style-loader css-loader
 npm run build
 ```
 
+#### Docker
+```
+docker build . -t keypost-app:latest
+docker run --env DATABASE_URL --env KEYPOST_DATABASE_PSSWD keypost-app:latest
+```
+
 ### Deploy
