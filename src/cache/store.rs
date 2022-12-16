@@ -7,6 +7,10 @@ lazy_static! {
         let map = HashMap::new();
         Mutex::new(map)
     };
+    static ref BIN_CACHE: Mutex<HashMap<Vec<u8>, Vec<u8>>> = {
+        let map = HashMap::new();
+        Mutex::new(map)
+    };
 }
 
 pub fn insert(k: u32, v: Vec<u8>) {
@@ -20,6 +24,11 @@ pub fn insert_str(k: u32, s: &str) {
     cache.insert(k, v);
 }
 
+pub fn insert_bin(k: Vec<u8>, v: Vec<u8>) {
+    let mut cache = BIN_CACHE.lock().unwrap();
+    cache.insert(k, v);
+}
+
 pub fn get(k: &u32) -> Option<Vec<u8>> {
     let cache = CACHE.lock().unwrap();
     cache.get(k).cloned()
@@ -28,4 +37,9 @@ pub fn get(k: &u32) -> Option<Vec<u8>> {
 pub fn get_str(k: &u32) -> Option<String> {
     let cache = CACHE.lock().unwrap();
     cache.get(k).map(|v| String::from_utf8_lossy(v).to_string())
+}
+
+pub fn get_bin(k: &[u8]) -> Option<Vec<u8>> {
+    let cache = BIN_CACHE.lock().unwrap();
+    cache.get(k).cloned()
 }
