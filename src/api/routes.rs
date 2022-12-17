@@ -1,5 +1,6 @@
 use rocket_contrib::json;
 use rocket_contrib::json::{Json, JsonValue};
+use sha2::{Digest, Sha256};
 
 use crate::api::*;
 use crate::cache;
@@ -28,7 +29,8 @@ pub fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
 
     match cache::get_str(&payload.id) {
         Some(expected_challenge) => {
-            let verifier = base64::decode(&payload.v).expect("Could not base64 decode payload.v!");
+            let verifier =
+                base64::decode(&payload.v).expect("Could not base64 decode in register_finish!");
             let actual_challenge = pkce::code_challenge(&verifier);
             if expected_challenge != actual_challenge {
                 return json!({ "id": &payload.id, "o": "bad_nonce_or_code_verifier" });
@@ -58,7 +60,8 @@ pub fn login_start(payload: Json<LoginStart>) -> JsonValue {
     let user = persistence::find_user(&payload.e)
         .expect("No User result!")
         .expect("User not found!");
-    let password_file_bytes = base64::decode(user.psswd_file).expect("Could not base64 decode!");
+    let password_file_bytes =
+        base64::decode(user.psswd_file).expect("Could not base64 decode in login_start!");
     let server_login_start_result =
         opaque.login_start(&payload.e, &password_file_bytes, &payload.i);
     let nonce = rand::random::<u32>();
@@ -75,13 +78,41 @@ pub fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
     let server_login_bytes = cache::get(&payload.id).unwrap();
     let opaque = crypto::Opaque::new();
     match opaque.login_finish(&server_login_bytes, &payload.i) {
-        Ok(()) => json!({ "id": &payload.id, "o": "Success" }),
+        Ok(session_key) => {
+            let rand_bytes = crypto::rand_bytes();
+            let nonce = [
+                payload.id.to_be_bytes(),
+                payload.id.to_be_bytes(),
+                payload.id.to_be_bytes(),
+            ]
+            .concat();
+            let ciphertext = crypto::encrypt_bytes(&nonce, &rand_bytes, &session_key);
+            let hash = Sha256::digest(&ciphertext).to_vec();
+            cache::insert_bin(hash, ciphertext);
+            json!({ "id": &payload.id, "o": base64::encode(rand_bytes) })
+        }
         Err(err) => {
             println!(
                 "Error during login: id={}, {}",
                 &payload.id,
                 format!("{:?}", err)
             );
+            json!({ "id": &payload.id, "o": "Failed" })
+        }
+    }
+}
+
+#[post("/login/verify", format = "json", data = "<payload>")]
+pub fn login_verify(payload: Json<LoginVerify>) -> JsonValue {
+    println!("{:?}", &payload);
+    let client_hash = base64::decode(&payload.i).expect("Could not base64 decode in login_verify!");
+    match cache::get_bin(&client_hash) {
+        Some(session_key) => {
+            cache::insert(payload.id, session_key);
+            json!({ "id": &payload.id, "o": "Success" })
+        }
+        _ => {
+            println!("login verification failed: {}", &payload.id);
             json!({ "id": &payload.id, "o": "Failed" })
         }
     }

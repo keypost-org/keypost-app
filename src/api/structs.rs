@@ -32,6 +32,12 @@ pub struct LoginFinish {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct LoginVerify {
+    pub id: u32,
+    pub i: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RegisterLockerStart {
     pub id: String,
     pub e: String,

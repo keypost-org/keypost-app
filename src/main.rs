@@ -33,6 +33,7 @@ fn rocket() -> rocket::Rocket {
                 api::register_finish,
                 api::login_start,
                 api::login_finish,
+                api::login_verify,
                 api::register_locker_start,
                 api::register_locker_finish,
                 api::open_locker_start,

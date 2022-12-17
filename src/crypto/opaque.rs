@@ -131,15 +131,15 @@ impl Opaque {
         &self,
         server_login_bytes: &[u8],
         credential_finalization_base64: &str,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<Vec<u8>, ProtocolError> {
         let credential_finalization_bytes = base64::decode(credential_finalization_base64)
             .expect("Could not perform base64 deocde");
         let server_login =
             ServerLogin::<DefaultCipherSuite>::deserialize(server_login_bytes).unwrap();
-        server_login.finish(CredentialFinalization::deserialize(
+        let r = server_login.finish(CredentialFinalization::deserialize(
             &credential_finalization_bytes[..],
         )?)?;
-        Ok(())
+        Ok(r.session_key.to_vec())
     }
 
     pub fn register_locker_start(
