@@ -76,19 +76,45 @@ fn add_locker<'a>(
         .get_result(&connection)
 }
 
-pub fn fetch_locker_contents(email_: &str, locker_id_: &str) -> Result<(Vec<u8>, Vec<u8>), Error> {
+pub fn fetch_locker_contents(
+    email_arg: &str,
+    locker_id_arg: &str,
+) -> Result<(Vec<u8>, Vec<u8>), Error> {
     use crate::schema::lockers::dsl::*;
     let connection = establish_connection();
     let results: Vec<Locker> = lockers
-        .filter(locker_id.eq(locker_id_))
-        .filter(email.eq(email_))
+        .filter(locker_id.eq(locker_id_arg))
+        .filter(email.eq(email_arg))
         .limit(1)
         .load::<Locker>(&connection)?;
-    let locker: Locker = results.first().cloned().unwrap();
+    let locker: Locker = results
+        .first()
+        .cloned()
+        .expect("Error fetching locker contents!");
     Ok((
-        base64::decode(locker.psswd_file).unwrap(),
-        base64::decode(locker.ciphertext).unwrap(),
+        base64::decode(locker.psswd_file).expect("Error decoding locker contents!"),
+        base64::decode(locker.ciphertext).expect("Error decoding locker contents!"),
     ))
+}
+
+pub fn fetch_lockers(email_arg: &str) -> Result<Vec<Locker>, Error> {
+    use crate::schema::lockers::dsl::*;
+    let connection = establish_connection();
+    let results: Vec<Locker> = lockers
+        .filter(email.eq(email_arg))
+        .load::<Locker>(&connection)?;
+    Ok(results)
+}
+
+pub fn delete_locker_contents(email_arg: &str, locker_id_arg: &str) -> Result<usize, Error> {
+    use crate::schema::lockers::dsl::*;
+    let connection = establish_connection();
+    diesel::delete(
+        lockers
+            .filter(locker_id.eq(locker_id_arg))
+            .filter(email.eq(email_arg)),
+    )
+    .execute(&connection)
 }
 
 fn establish_connection() -> PgConnection {
