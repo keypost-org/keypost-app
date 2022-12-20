@@ -16,6 +16,7 @@ mod api;
 mod cache;
 mod crypto;
 mod persistence;
+mod user;
 mod util;
 
 pub mod models;

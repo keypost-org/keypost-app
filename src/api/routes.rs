@@ -6,6 +6,7 @@ use crate::api::*;
 use crate::cache;
 use crate::crypto;
 use crate::persistence;
+use crate::user;
 
 //TODO Implement http status code for 500 errors
 
@@ -57,19 +58,21 @@ pub fn login_start(payload: Json<LoginStart>) -> JsonValue {
     //TODO Should we do a PKCE-type protocol instead of just a nonce? Maybe OPAQUE internals does this already?
     println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
-    let user = persistence::find_user(&payload.e)
-        .expect("No User result!")
-        .expect("User not found!");
-    let password_file_bytes =
-        base64::decode(user.psswd_file).expect("Could not base64 decode in login_start!");
-    let server_login_start_result =
-        opaque.login_start(&payload.e, &password_file_bytes, &payload.i);
     let nonce = rand::random::<u32>();
-    let server_login_bytes = server_login_start_result.state.serialize().to_vec();
-    cache::insert(nonce, server_login_bytes);
-    let response_bytes = server_login_start_result.message.serialize();
-    let response = base64::encode(response_bytes);
-    json!({ "id": &nonce, "o": &response })
+    match user::get_user(&payload.e) {
+        Ok(user) => {
+            let password_file_bytes =
+                base64::decode(user.psswd_file).expect("Could not base64 decode in login_start!");
+            let server_login_start_result =
+                opaque.login_start(&payload.e, &password_file_bytes, &payload.i);
+            let server_login_bytes = server_login_start_result.state.serialize().to_vec();
+            cache::insert(nonce, server_login_bytes);
+            let response_bytes = server_login_start_result.message.serialize();
+            let response = base64::encode(response_bytes);
+            json!({ "id": &nonce, "o": &response })
+        }
+        Err(err) => json!({ "id": &nonce, "o": base64::encode(&err) }),
+    }
 }
 
 #[post("/login/finish", format = "json", data = "<payload>")]
