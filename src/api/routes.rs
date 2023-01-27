@@ -5,6 +5,7 @@ use sha2::{Digest, Sha256};
 use crate::api::*;
 use crate::cache;
 use crate::crypto;
+use crate::locker;
 use crate::persistence;
 use crate::user;
 
@@ -126,12 +127,11 @@ pub fn register_locker_start(payload: Json<RegisterLockerStart>) -> JsonValue {
     let id = &payload.id;
     let _email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
-    let opaque = crypto::Opaque::new();
-    match opaque.register_locker_start(id, &input) {
-        Ok(output) => json!({ "id": 0, "o": output }),
+    match locker::register_start(id, &input) {
+        Ok(response) => json!({ "id": response.id, "o": response.output }),
         Err(err) => {
             println!("Error in register_locker_start: {:?}", err);
-            json!({ "id": 0, "o": "There was an error during register_locker_start" })
+            json!({ "id": err.id, "o": err.msg })
         }
     }
 }
@@ -142,12 +142,11 @@ pub fn register_locker_finish(payload: Json<RegisterLockerFinish>) -> JsonValue 
     let email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
     let ciphertext = base64::decode(&payload.c).expect("Could not base64 decode!");
-    let opaque = crypto::Opaque::new();
-    match opaque.register_locker_finish(id, email, &input, &ciphertext) {
-        Ok(()) => json!({ "id": 0, "o": "Success" }),
+    match locker::register_finish(id, email, &input, &ciphertext) {
+        Ok(response) => json!({ "id": response.id, "o": response.output }),
         Err(err) => {
             println!("Error in register_locker_finish: {:?}", err);
-            json!({ "id": 0, "o": "There was an error during register_locker_finish" })
+            json!({ "id": err.id, "o": err.msg })
         }
     }
 }
@@ -157,15 +156,11 @@ pub fn open_locker_start(payload: Json<OpenLockerStart>) -> JsonValue {
     let locker_id = payload.id.as_str();
     let email = payload.e.as_str();
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
-    let (locker_psswd_file, _ciphertext) = persistence::fetch_locker_contents(email, locker_id)
-        .expect("Could not get locker_contents");
-    let nonce: u32 = crypto::create_nonce();
-    let opaque = crypto::Opaque::new();
-    match opaque.open_locker_start(locker_id, &input, &locker_psswd_file, nonce) {
-        Ok(output) => json!({ "id": 0, "o": output, "n": nonce }),
+    match locker::open_start(locker_id, email, &input) {
+        Ok(response) => json!({ "id": response.id, "o": response.output, "n": response.nonce }),
         Err(err) => {
             println!("Error in open_locker_start: {:?}", err);
-            json!({ "id": 0, "o": "There was an error during open_locker_start", "n": nonce })
+            json!({ "id": err.id, "o": err.msg, "n": err.nonce })
         }
     }
 }
@@ -174,20 +169,13 @@ pub fn open_locker_start(payload: Json<OpenLockerStart>) -> JsonValue {
 pub fn open_locker_finish(payload: Json<OpenLockerFinish>) -> JsonValue {
     let locker_id = &payload.id;
     let email = &payload.e;
-    let (_locker_psswd_file, ciphertext) = persistence::fetch_locker_contents(email, locker_id)
-        .expect("Could not get locker_contents");
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
     let nonce = payload.n;
-    let server_login_bytes: Vec<u8> = cache::get(&nonce)
-        .unwrap_or_else(|| panic!("Could not find cached server_login_bytes: {:?}", nonce));
-    let opaque = crypto::Opaque::new();
-    match opaque.open_locker_finish(&ciphertext, &input, &server_login_bytes) {
-        Ok(encrypted_ciphertext) => {
-            json!({ "id": 0, "o": base64::encode(encrypted_ciphertext), "n": 0 })
-        }
+    match locker::open_finish(locker_id, email, &input, nonce) {
+        Ok(response) => json!({ "id": response.id, "o": response.output, "n": response.nonce }),
         Err(err) => {
             println!("Error in open_locker_finish: {:?}", err);
-            json!({ "id": 0, "o": "There was an error during open_locker_finish", "n": nonce })
+            json!({ "id": err.id, "o": err.msg, "n": err.nonce })
         }
     }
 }

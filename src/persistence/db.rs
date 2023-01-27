@@ -87,10 +87,7 @@ pub fn fetch_locker_contents(
         .filter(email.eq(email_arg))
         .limit(1)
         .load::<Locker>(&connection)?;
-    let locker: Locker = results
-        .first()
-        .cloned()
-        .expect("Error fetching locker contents!");
+    let locker: Locker = results.first().cloned().ok_or(Error::NotFound)?;
     Ok((
         base64::decode(locker.psswd_file).expect("Error decoding locker contents!"),
         base64::decode(locker.ciphertext).expect("Error decoding locker contents!"),

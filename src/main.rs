@@ -15,6 +15,7 @@ use rocket_contrib::serve::StaticFiles;
 mod api;
 mod cache;
 mod crypto;
+mod locker;
 mod persistence;
 mod user;
 mod util;
