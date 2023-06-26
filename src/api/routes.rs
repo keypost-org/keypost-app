@@ -180,6 +180,35 @@ pub fn open_locker_finish(payload: Json<OpenLockerFinish>) -> JsonValue {
     }
 }
 
+#[post("/locker/delete/start", format = "json", data = "<payload>")]
+pub fn delete_locker_start(payload: Json<DeleteLockerStart>) -> JsonValue {
+    let locker_id = payload.id.as_str();
+    let email = payload.e.as_str();
+    let input = base64::decode(&payload.i).expect("Could not base64 decode!");
+    match locker::delete_start(locker_id, email, &input) {
+        Ok(response) => json!({ "id": response.id, "o": response.output, "n": response.nonce }),
+        Err(err) => {
+            println!("Error in delete_locker_start: {:?}", err);
+            json!({ "id": err.id, "o": err.msg, "n": err.nonce })
+        }
+    }
+}
+
+#[post("/locker/delete/finish", format = "json", data = "<payload>")]
+pub fn delete_locker_finish(payload: Json<DeleteLockerFinish>) -> JsonValue {
+    let locker_id = &payload.id;
+    let email = &payload.e;
+    let input = base64::decode(&payload.i).expect("Could not base64 decode!");
+    let nonce = payload.n;
+    match locker::delete_finish(locker_id, email, &input, nonce) {
+        Ok(response) => json!({ "id": response.id, "o": response.output, "n": response.nonce }),
+        Err(err) => {
+            println!("Error in delete_locker_finish: {:?}", err);
+            json!({ "id": err.id, "o": err.msg, "n": err.nonce })
+        }
+    }
+}
+
 // To allow (also need a browser extension) CORS during development (-web requests to -app, localhost on different ports)
 // TODO Add a build cfg feature around this for local (i.e. non_production) builds only
 #[options("/register/start")]

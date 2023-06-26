@@ -180,6 +180,7 @@ impl Opaque {
         Ok(())
     }
 
+    //Also used for delete
     pub fn open_locker_start(
         &self,
         locker_id: &str,
@@ -211,6 +212,7 @@ impl Opaque {
         Ok(base64::encode(credential_response_bytes))
     }
 
+    //Also used for delete
     pub fn open_locker_finish(
         &self,
         locker_contents: &[u8], // same as ciphertext
