@@ -123,3 +123,54 @@ pub fn open_finish(
         }
     }
 }
+
+pub fn delete_start(
+    locker_id: &str,
+    email: &str,
+    input: &[u8],
+) -> Result<LockerResponse, LockerError> {
+    //Client to prove ownership (i.e. open_start accomplishes this) in order to allow them to call delete_finish().
+    open_start(locker_id, email, input)
+}
+
+pub fn delete_finish(
+    locker_id: &str,
+    email: &str,
+    input: &[u8],
+    nonce: u32,
+) -> Result<LockerResponse, LockerError> {
+    //Finish the open-locker opaque protocol, but instead of returning the encrypted key, delete locker contents (i.e. key).
+    match open_finish(locker_id, email, input, nonce) {
+        Ok(_) => delete_contents(email, locker_id, nonce),
+        Err(err) => {
+            println!("Error in locker::delete_finish: {:?}", err);
+            Err(LockerError {
+                id: 0,
+                msg: "There was an error during locker::delete_finish".to_string(),
+                nonce,
+            })
+        }
+    }
+}
+
+fn delete_contents(
+    email: &str,
+    locker_id: &str,
+    nonce: u32,
+) -> Result<LockerResponse, LockerError> {
+    match persistence::delete_locker_contents(email, locker_id) {
+        Ok(_) => Ok(LockerResponse {
+            id: 0,
+            output: "Key deleted!".to_string(),
+            nonce,
+        }),
+        Err(err) => {
+            println!("Error in locker::delete_contents: {:?}", err);
+            Err(LockerError {
+                id: 0,
+                msg: "There was an error during locker::delete_contents".to_string(),
+                nonce,
+            })
+        }
+    }
+}

@@ -25,6 +25,8 @@ fn rocket() -> rocket::Rocket {
                 register_locker_finish,
                 open_locker_start,
                 open_locker_finish,
+                delete_locker_start,
+                delete_locker_finish,
                 options_rs,
                 options_rf,
                 options_ls,

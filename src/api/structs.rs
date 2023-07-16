@@ -66,3 +66,18 @@ pub struct OpenLockerFinish {
     pub i: String,
     pub n: u32,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DeleteLockerStart {
+    pub id: String,
+    pub e: String,
+    pub i: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DeleteLockerFinish {
+    pub id: String,
+    pub e: String,
+    pub i: String,
+    pub n: u32,
+}
