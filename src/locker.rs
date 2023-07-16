@@ -129,7 +129,7 @@ pub fn delete_start(
     email: &str,
     input: &[u8],
 ) -> Result<LockerResponse, LockerError> {
-    //Need to have client prove ownership (i.e. open_start accomplishes this) in order to allow them to call delete_finish()
+    //Client to prove ownership (i.e. open_start accomplishes this) in order to allow them to call delete_finish().
     open_start(locker_id, email, input)
 }
 
@@ -139,9 +139,9 @@ pub fn delete_finish(
     input: &[u8],
     nonce: u32,
 ) -> Result<LockerResponse, LockerError> {
-    //Need to finish the open-locker opaque protocol and instead of returning the encrypted key, simply delete the locker contents/key.
+    //Finish the open-locker opaque protocol, but instead of returning the encrypted key, delete locker contents (i.e. key).
     match open_finish(locker_id, email, input, nonce) {
-        Ok(_) => delete_locker_contents(email, locker_id, nonce),
+        Ok(_) => delete_contents(email, locker_id, nonce),
         Err(err) => {
             println!("Error in locker::delete_finish: {:?}", err);
             Err(LockerError {
@@ -153,7 +153,7 @@ pub fn delete_finish(
     }
 }
 
-fn delete_locker_contents(
+fn delete_contents(
     email: &str,
     locker_id: &str,
     nonce: u32,
@@ -164,10 +164,13 @@ fn delete_locker_contents(
             output: "Key deleted!".to_string(),
             nonce,
         }),
-        Err(_) => Err(LockerError {
-            id: 0,
-            msg: "There was an error during delete_locker_finish".to_string(),
-            nonce,
-        }),
+        Err(err) => {
+            println!("Error in locker::delete_contents: {:?}", err);
+            Err(LockerError {
+                id: 0,
+                msg: "There was an error during locker::delete_contents".to_string(),
+                nonce,
+            })
+        }
     }
 }
