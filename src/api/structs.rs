@@ -81,3 +81,8 @@ pub struct DeleteLockerFinish {
     pub i: String,
     pub n: u32,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Authenticated {
+    pub session_key: Vec<u8>,
+}
