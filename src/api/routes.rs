@@ -16,7 +16,6 @@ impl<'a> FromRequest<'a, '_> for Authenticated {
     type Error = &'static str;
 
     fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, Self::Error> {
-        println!("in from_request...");
         match request.headers().get("AUTHORIZATION").next() {
             Some(val) => match base64::decode(val) {
                 Ok(session_id) => match cache::get_bin(&session_id) {
@@ -138,15 +137,10 @@ pub fn login_verify(payload: Json<LoginVerify>) -> JsonValue {
         //TODO Need to expire/delete this session_key after x amount of minutes.
         Some(session_key) => {
             //TODO Need to delete the client_hash kv entry since verification is complete.
-            println!("$$$$$$$$$$$$$ NONCE:{}", &payload.id);
             let session_key_id = crypto::encrypt_bytes_with_u32_nonce(
                 &payload.id,
                 &[payload.id.to_be_bytes()].concat(),
                 &session_key,
-            );
-            println!(
-                "inserting session_key_id into cache {}",
-                base64::encode(&session_key_id)
             );
             cache::insert_bin(session_key_id, session_key);
             json!({ "id": 0, "o": "Success" })
@@ -159,7 +153,11 @@ pub fn login_verify(payload: Json<LoginVerify>) -> JsonValue {
 }
 
 #[post("/locker/register/start", format = "json", data = "<payload>")]
-pub fn register_locker_start(payload: Json<RegisterLockerStart>) -> JsonValue {
+pub fn register_locker_start(
+    payload: Json<RegisterLockerStart>,
+    _auth: Authenticated,
+) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let id = &payload.id;
     let _email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -173,7 +171,11 @@ pub fn register_locker_start(payload: Json<RegisterLockerStart>) -> JsonValue {
 }
 
 #[post("/locker/register/finish", format = "json", data = "<payload>")]
-pub fn register_locker_finish(payload: Json<RegisterLockerFinish>) -> JsonValue {
+pub fn register_locker_finish(
+    payload: Json<RegisterLockerFinish>,
+    _auth: Authenticated,
+) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let id = &payload.id;
     let email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -188,8 +190,8 @@ pub fn register_locker_finish(payload: Json<RegisterLockerFinish>) -> JsonValue 
 }
 
 #[post("/locker/open/start", format = "json", data = "<payload>")]
-pub fn open_locker_start(payload: Json<OpenLockerStart>, auth: Authenticated) -> JsonValue {
-    println!("$$$$$$$$$$$$$$$$$$$$$ session_id={:?}", auth.session_key);
+pub fn open_locker_start(payload: Json<OpenLockerStart>, _auth: Authenticated) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let locker_id = payload.id.as_str();
     let email = payload.e.as_str();
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -203,7 +205,8 @@ pub fn open_locker_start(payload: Json<OpenLockerStart>, auth: Authenticated) ->
 }
 
 #[post("/locker/open/finish", format = "json", data = "<payload>")]
-pub fn open_locker_finish(payload: Json<OpenLockerFinish>) -> JsonValue {
+pub fn open_locker_finish(payload: Json<OpenLockerFinish>, _auth: Authenticated) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let locker_id = &payload.id;
     let email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -218,7 +221,8 @@ pub fn open_locker_finish(payload: Json<OpenLockerFinish>) -> JsonValue {
 }
 
 #[post("/locker/delete/start", format = "json", data = "<payload>")]
-pub fn delete_locker_start(payload: Json<DeleteLockerStart>) -> JsonValue {
+pub fn delete_locker_start(payload: Json<DeleteLockerStart>, _auth: Authenticated) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let locker_id = payload.id.as_str();
     let email = payload.e.as_str();
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -232,7 +236,8 @@ pub fn delete_locker_start(payload: Json<DeleteLockerStart>) -> JsonValue {
 }
 
 #[post("/locker/delete/finish", format = "json", data = "<payload>")]
-pub fn delete_locker_finish(payload: Json<DeleteLockerFinish>) -> JsonValue {
+pub fn delete_locker_finish(payload: Json<DeleteLockerFinish>, _auth: Authenticated) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let locker_id = &payload.id;
     let email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
