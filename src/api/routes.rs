@@ -1,3 +1,5 @@
+use rocket::outcome::Outcome::*;
+use rocket::request::{self, FromRequest, Request};
 use rocket_contrib::json;
 use rocket_contrib::json::{Json, JsonValue};
 use sha2::{Digest, Sha256};
@@ -9,26 +11,60 @@ use crate::locker;
 use crate::persistence;
 use crate::user;
 
+// https://github.com/SergioBenitez/Rocket/discussions/2041#discussioncomment-1885738
+impl<'a> FromRequest<'a, '_> for Authenticated {
+    type Error = &'static str;
+
+    fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, Self::Error> {
+        match request.headers().get("AUTHORIZATION").next() {
+            Some(val) => match base64::decode(val) {
+                Ok(session_id) => match cache::get_bin(&session_id) {
+                    Some(session_key) => Success(Authenticated { session_key }),
+                    None => {
+                        println!("session_id not found in cache");
+                        Failure((
+                            rocket::http::Status::from_code(401u16)
+                                .unwrap_or(rocket::http::Status::InternalServerError),
+                            "Unauthorized",
+                        ))
+                    }
+                },
+                Err(_) => {
+                    println!("Could not base64 decode");
+                    Failure((
+                        rocket::http::Status::from_code(401u16)
+                            .unwrap_or(rocket::http::Status::InternalServerError),
+                        "Unauthorized",
+                    ))
+                }
+            },
+            None => {
+                println!("AUTH header not found");
+                Failure((
+                    rocket::http::Status::from_code(401u16)
+                        .unwrap_or(rocket::http::Status::InternalServerError),
+                    "Unauthorized",
+                ))
+            }
+        }
+    }
+}
+
 //TODO Implement http status code for 500 errors
 
-/// curl -X POST -H "Content-Type: application/json" -d '{ "e": "jon@example.com", "i": "Zm9vYmFyCg==", "c": "pkce_challenge" }' http://localhost:8000/register/start
 #[post("/register/start", format = "json", data = "<payload>")]
 pub fn register_start(payload: Json<RegisterStart>) -> JsonValue {
-    println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
     let server_registration_start = opaque.server_side_registration_start(&payload.i, &payload.e);
-    let nonce = rand::random::<u32>();
+    let nonce = crypto::create_nonce();
     cache::insert_str(nonce, &payload.c);
     let response_bytes = server_registration_start.message.serialize();
     let response = base64::encode(response_bytes);
     json!({ "id": &nonce, "o": &response })
 }
 
-/// curl -X POST -H "Content-Type: application/json" -d '{ "id": 1234, "e": "jon@example.com", "i": "Zm9vYmFyCg==", "v": "pkce_verifier" }' http://localhost:8000/register/finish
 #[post("/register/finish", format = "json", data = "<payload>")]
 pub fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
-    println!("{:?}", &payload);
-
     match cache::get_str(&payload.id) {
         Some(expected_challenge) => {
             let verifier =
@@ -56,10 +92,8 @@ pub fn register_finish(payload: Json<RegisterFinish>) -> JsonValue {
 
 #[post("/login/start", format = "json", data = "<payload>")]
 pub fn login_start(payload: Json<LoginStart>) -> JsonValue {
-    //TODO Should we do a PKCE-type protocol instead of just a nonce? Maybe OPAQUE internals does this already?
-    println!("{:?}", &payload);
     let opaque = crypto::Opaque::new();
-    let nonce = rand::random::<u32>();
+    let nonce = crypto::create_nonce(); // This is the payload.id to be used throughout entire /login flow and tied to the session_key
     match user::get_user(&payload.e) {
         Ok(user) => {
             let password_file_bytes =
@@ -78,29 +112,19 @@ pub fn login_start(payload: Json<LoginStart>) -> JsonValue {
 
 #[post("/login/finish", format = "json", data = "<payload>")]
 pub fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
-    println!("{:?}", &payload);
     let server_login_bytes = cache::get(&payload.id).unwrap();
     let opaque = crypto::Opaque::new();
     match opaque.login_finish(&server_login_bytes, &payload.i) {
         Ok(session_key) => {
             let rand_bytes = crypto::rand_bytes();
-            let nonce = [
-                payload.id.to_be_bytes(),
-                payload.id.to_be_bytes(),
-                payload.id.to_be_bytes(),
-            ]
-            .concat();
-            let ciphertext = crypto::encrypt_bytes(&nonce, &rand_bytes, &session_key);
+            let ciphertext =
+                crypto::encrypt_bytes_with_u32_nonce(&payload.id, &session_key, &rand_bytes);
             let hash = Sha256::digest(&ciphertext).to_vec();
-            cache::insert_bin(hash, ciphertext);
+            cache::insert_bin(hash, session_key);
             json!({ "id": &payload.id, "o": base64::encode(rand_bytes) })
         }
         Err(err) => {
-            println!(
-                "Error during login: id={}, {}",
-                &payload.id,
-                format!("{:?}", err)
-            );
+            println!("Error during login: {:?}", err);
             json!({ "id": &payload.id, "o": "Failed" })
         }
     }
@@ -108,22 +132,32 @@ pub fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
 
 #[post("/login/verify", format = "json", data = "<payload>")]
 pub fn login_verify(payload: Json<LoginVerify>) -> JsonValue {
-    println!("{:?}", &payload);
     let client_hash = base64::decode(&payload.i).expect("Could not base64 decode in login_verify!");
     match cache::get_bin(&client_hash) {
+        //TODO Need to expire/delete this session_key after x amount of minutes.
         Some(session_key) => {
-            cache::insert(payload.id, session_key);
-            json!({ "id": &payload.id, "o": "Success" })
+            //TODO Need to delete the client_hash kv entry since verification is complete.
+            let session_key_id = crypto::encrypt_bytes_with_u32_nonce(
+                &payload.id,
+                &session_key,
+                &[payload.id.to_be_bytes()].concat(),
+            );
+            cache::insert_bin(session_key_id, session_key);
+            json!({ "id": 0, "o": "Success" })
         }
         _ => {
             println!("login verification failed: {}", &payload.id);
-            json!({ "id": &payload.id, "o": "Failed" })
+            json!({ "id": 0, "o": "Failed" })
         }
     }
 }
 
 #[post("/locker/register/start", format = "json", data = "<payload>")]
-pub fn register_locker_start(payload: Json<RegisterLockerStart>) -> JsonValue {
+pub fn register_locker_start(
+    payload: Json<RegisterLockerStart>,
+    _auth: Authenticated,
+) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let id = &payload.id;
     let _email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -137,7 +171,11 @@ pub fn register_locker_start(payload: Json<RegisterLockerStart>) -> JsonValue {
 }
 
 #[post("/locker/register/finish", format = "json", data = "<payload>")]
-pub fn register_locker_finish(payload: Json<RegisterLockerFinish>) -> JsonValue {
+pub fn register_locker_finish(
+    payload: Json<RegisterLockerFinish>,
+    _auth: Authenticated,
+) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let id = &payload.id;
     let email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -152,7 +190,8 @@ pub fn register_locker_finish(payload: Json<RegisterLockerFinish>) -> JsonValue 
 }
 
 #[post("/locker/open/start", format = "json", data = "<payload>")]
-pub fn open_locker_start(payload: Json<OpenLockerStart>) -> JsonValue {
+pub fn open_locker_start(payload: Json<OpenLockerStart>, _auth: Authenticated) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let locker_id = payload.id.as_str();
     let email = payload.e.as_str();
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -166,7 +205,8 @@ pub fn open_locker_start(payload: Json<OpenLockerStart>) -> JsonValue {
 }
 
 #[post("/locker/open/finish", format = "json", data = "<payload>")]
-pub fn open_locker_finish(payload: Json<OpenLockerFinish>) -> JsonValue {
+pub fn open_locker_finish(payload: Json<OpenLockerFinish>, _auth: Authenticated) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let locker_id = &payload.id;
     let email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -181,7 +221,8 @@ pub fn open_locker_finish(payload: Json<OpenLockerFinish>) -> JsonValue {
 }
 
 #[post("/locker/delete/start", format = "json", data = "<payload>")]
-pub fn delete_locker_start(payload: Json<DeleteLockerStart>) -> JsonValue {
+pub fn delete_locker_start(payload: Json<DeleteLockerStart>, _auth: Authenticated) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let locker_id = payload.id.as_str();
     let email = payload.e.as_str();
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
@@ -195,7 +236,8 @@ pub fn delete_locker_start(payload: Json<DeleteLockerStart>) -> JsonValue {
 }
 
 #[post("/locker/delete/finish", format = "json", data = "<payload>")]
-pub fn delete_locker_finish(payload: Json<DeleteLockerFinish>) -> JsonValue {
+pub fn delete_locker_finish(payload: Json<DeleteLockerFinish>, _auth: Authenticated) -> JsonValue {
+    //TODO use _auth.session_key in order to decrypt payload and encrypt response
     let locker_id = &payload.id;
     let email = &payload.e;
     let input = base64::decode(&payload.i).expect("Could not base64 decode!");
