@@ -13,7 +13,7 @@ pub fn encrypt_bytes(nonce: &[u8], key: &[u8], plaintext: &[u8]) -> Vec<u8> {
     encrypt(&nonce[..12], key, plaintext).expect("Could not encrypt bytes!")
 }
 
-pub fn encrypt_bytes_with_u32_nonce(u32_nonce: &u32, plaintext: &[u8], key: &[u8]) -> Vec<u8> {
+pub fn encrypt_bytes_with_u32_nonce(u32_nonce: &u32, key: &[u8], plaintext: &[u8]) -> Vec<u8> {
     let nonce = expand_u32_nonce(u32_nonce);
     encrypt_bytes(&nonce, key, plaintext)
 }

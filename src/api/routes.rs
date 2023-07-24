@@ -1,7 +1,7 @@
 use rocket::outcome::Outcome::*;
 use rocket::request::{self, FromRequest, Request};
 use rocket_contrib::json;
-use rocket_contrib::json::*;
+use rocket_contrib::json::{Json, JsonValue};
 use sha2::{Digest, Sha256};
 
 use crate::api::*;
@@ -118,7 +118,7 @@ pub fn login_finish(payload: Json<LoginFinish>) -> JsonValue {
         Ok(session_key) => {
             let rand_bytes = crypto::rand_bytes();
             let ciphertext =
-                crypto::encrypt_bytes_with_u32_nonce(&payload.id, &rand_bytes, &session_key);
+                crypto::encrypt_bytes_with_u32_nonce(&payload.id, &session_key, &rand_bytes);
             let hash = Sha256::digest(&ciphertext).to_vec();
             cache::insert_bin(hash, session_key);
             json!({ "id": &payload.id, "o": base64::encode(rand_bytes) })
@@ -139,8 +139,8 @@ pub fn login_verify(payload: Json<LoginVerify>) -> JsonValue {
             //TODO Need to delete the client_hash kv entry since verification is complete.
             let session_key_id = crypto::encrypt_bytes_with_u32_nonce(
                 &payload.id,
-                &[payload.id.to_be_bytes()].concat(),
                 &session_key,
+                &[payload.id.to_be_bytes()].concat(),
             );
             cache::insert_bin(session_key_id, session_key);
             json!({ "id": 0, "o": "Success" })
