@@ -1,7 +1,7 @@
 mod init;
 mod opaque;
 
-pub use init::init;
+pub use init::*;
 pub use opaque::*;
 
 use chacha20poly1305::aead::{Aead, NewAead};

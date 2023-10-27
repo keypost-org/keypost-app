@@ -26,6 +26,7 @@ serde = "^1.0"
 serde_derive = "^1.0"
 serde_json = "^1.0"
 sha2 = "^0.9"
+thiserror = "^1.0"
 # yubihsm = "^0.38"
 zeroize = { version = "^1.5", features = ["zeroize_derive"] }
 
