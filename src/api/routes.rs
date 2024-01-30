@@ -104,8 +104,9 @@ pub fn login_finish(payload: Json<LoginFinish>) -> Result<JsonValue, ApiError> {
             let rand_bytes = crypto::rand_bytes();
             let ciphertext =
                 crypto::encrypt_bytes_with_u32_nonce(&payload.id, &session_key, &rand_bytes);
-            let hash = Sha256::digest(&ciphertext).to_vec();
-            cache::insert_bin(hash, session_key);
+            let client_hash = Sha256::digest(&ciphertext).to_vec();
+            //TODO Need to expire this client_hash/session_key incase /login/verify never completes (i.e. failed login attempts will pile up!).
+            cache::insert_bin(client_hash, session_key);
             Ok(json!({ "id": &payload.id, "o": base64::encode(rand_bytes) }))
         }
         Err(err) => {
@@ -118,17 +119,17 @@ pub fn login_finish(payload: Json<LoginFinish>) -> Result<JsonValue, ApiError> {
 
 #[post("/login/verify", format = "json", data = "<payload>")]
 pub fn login_verify(payload: Json<LoginVerify>) -> Result<JsonValue, ApiError> {
-    let client_hash = base64::decode(&payload.i).expect("Could not base64 decode in login_verify!");
+    let client_hash = base64::decode(&payload.i).map_err(ApiError::BadRequestDecode)?;
     match cache::get_bin(&client_hash) {
-        //TODO Need to expire/delete this session_key after x amount of minutes.
         Some(session_key) => {
-            //TODO Need to delete the client_hash kv entry since verification is complete.
             let session_key_id = crypto::encrypt_bytes_with_u32_nonce(
                 &payload.id,
                 &session_key,
                 &[payload.id.to_be_bytes()].concat(),
             );
+            //TODO Need to expire/delete this new session_key entry after x amount of minutes (i.e. user's session expired).
             cache::insert_bin(session_key_id, session_key);
+            cache::delete_bin(&client_hash); // i.e. login verification complete!
             Ok(json!({ "id": 0, "o": "Success" }))
         }
         _ => {

@@ -1,3 +1,6 @@
+
+#![allow(clippy::enum_variant_names)]
+
 use base64::DecodeError;
 use rocket::http::{ContentType, Status};
 use rocket::request::Request;
