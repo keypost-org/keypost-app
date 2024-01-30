@@ -43,3 +43,8 @@ pub fn get_bin(k: &[u8]) -> Option<Vec<u8>> {
     let cache = BIN_CACHE.lock().unwrap();
     cache.get(k).cloned()
 }
+
+pub fn delete_bin(k: &[u8]) -> bool {
+    let mut cache = BIN_CACHE.lock().unwrap();
+    cache.remove(k).is_some()
+}
