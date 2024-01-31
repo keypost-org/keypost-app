@@ -21,6 +21,7 @@ fn rocket() -> rocket::Rocket {
                 login_start,
                 login_finish,
                 login_verify,
+                logout,
                 register_locker_start,
                 register_locker_finish,
                 open_locker_start,
