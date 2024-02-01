@@ -21,7 +21,10 @@ impl<'a> FromRequest<'a, '_> for Authenticated {
         match request.headers().get("AUTHORIZATION").next() {
             Some(val) => match base64::decode(val) {
                 Ok(session_id) => match cache::get_bin(&session_id) {
-                    Some(session_key) => Success(Authenticated { session_key }),
+                    Some(session_key) => Success(Authenticated {
+                        session_id,
+                        session_key,
+                    }),
                     None => {
                         println!("session_id not found in cache");
                         Failure((Status::Unauthorized, ApiError::NotAuthenticated))
@@ -112,7 +115,6 @@ pub fn login_finish(payload: Json<LoginFinish>) -> Result<JsonValue, ApiError> {
         Err(err) => {
             println!("Error during login: {:?}", err);
             Err(ApiError::BadRequestProtocol)
-            //json!({ "id": &payload.id, "o": "Failed" })
         }
     }
 }
@@ -135,7 +137,17 @@ pub fn login_verify(payload: Json<LoginVerify>) -> Result<JsonValue, ApiError> {
         _ => {
             println!("login verification failed: {}", &payload.id);
             Err(ApiError::LoginError("Failed".to_string()))
-            // json!({ "id": 0, "o": "Failed" })
+        }
+    }
+}
+
+#[post("/logout", format = "json")]
+pub fn logout(auth: Authenticated) -> Result<JsonValue, ApiError> {
+    match cache::delete_bin(&auth.session_id) {
+        true => Ok(json!({ "id": 0, "o": "Success", "n": 0 })),
+        false => {
+            println!("Logout failed!");
+            Err(ApiError::LogoutError("Session not found!".to_string()))
         }
     }
 }
@@ -154,7 +166,6 @@ pub fn register_locker_start(
         Err(err) => {
             println!("Error in register_locker_start: {:?}", err);
             Err(err)
-            // json!({ "id": err.id, "o": err.msg })
         }
     }
 }
@@ -174,7 +185,6 @@ pub fn register_locker_finish(
         Err(err) => {
             println!("Error in register_locker_finish: {:?}", err);
             Err(err)
-            // json!({ "id": err.id, "o": err.msg })
         }
     }
 }
@@ -193,7 +203,6 @@ pub fn open_locker_start(
         Err(err) => {
             println!("Error in open_locker_start: {:?}", err);
             Err(err)
-            // json!({ "id": err.id, "o": err.msg, "n": err.nonce })
         }
     }
 }

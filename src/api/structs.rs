@@ -84,5 +84,6 @@ pub struct DeleteLockerFinish {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Authenticated {
+    pub session_id: Vec<u8>,
     pub session_key: Vec<u8>,
 }

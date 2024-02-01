@@ -1,4 +1,3 @@
-
 #![allow(clippy::enum_variant_names)]
 
 use base64::DecodeError;
@@ -13,6 +12,9 @@ use thiserror::Error;
 pub enum ApiError {
     #[error("Error during login: `{0}`")]
     LoginError(String),
+
+    #[error("Error during logout: `{0}`")]
+    LogoutError(String),
 
     #[error("User not Authenticated.")]
     NotAuthenticated,
@@ -67,6 +69,7 @@ impl<'r> Responder<'r> for ApiError {
 fn get_status(err: ApiError) -> Status {
     match err {
         ApiError::LoginError(_) => Status::BadRequest,
+        ApiError::LogoutError(_) => Status::Unauthorized,
         ApiError::NotAuthenticated => Status::Unauthorized,
         ApiError::InvalidConfirmationKey(_) => Status::BadRequest,
         ApiError::InvalidRequest { .. } => Status::BadRequest,
