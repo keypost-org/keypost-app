@@ -69,7 +69,7 @@ impl<'r> Responder<'r> for ApiError {
 fn get_status(err: ApiError) -> Status {
     match err {
         ApiError::LoginError(_) => Status::BadRequest,
-        ApiError::LogoutError(_) => Status::InternalServerError,
+        ApiError::LogoutError(_) => Status::Unauthorized,
         ApiError::NotAuthenticated => Status::Unauthorized,
         ApiError::InvalidConfirmationKey(_) => Status::BadRequest,
         ApiError::InvalidRequest { .. } => Status::BadRequest,
